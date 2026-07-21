@@ -12,35 +12,37 @@ workaround · 🟢 mejora / fase 2.
 
 ## 1. Cambios necesarios en el backend (`klarimba-api`)
 
-### 1.1 🔴 Exponer `platformRole` en `/auth/me` (o en el JWT)
+### 1.1 ✅ RESUELTO — `platformRole` expuesto en `/auth/me`
 
-- **Hoy**: `platformRole` vive en `users.platform_role` pero no viaja en el
-  payload del JWT (`AuthService.createToken` solo firma `aud, iss, sub, email`)
-  ni en `AuthMeSerializer`.
-- **Impacto**: el frontend no puede saber si el usuario es `SUPER_ADMIN`; lo
-  detecta **sondeando** `GET /backoffice/organizations?limit=1` y tratando el
-  401/403 como "no es admin" ([src/lib/api/backoffice.ts](../src/lib/api/backoffice.ts),
-  `isSuperAdmin()`). Es un request extra en cada resolución de contexto y un
-  patrón frágil.
-- **Cambio propuesto**: añadir `platformRole` a `AuthMeSerializer`
-  (`src/modules/auth/presentation/serializers/auth-me.serializer.ts`).
-- **Al implementarse**: reemplazar el sondeo de `isSuperAdmin()` por la lectura
+- **Estado**: implementado en el API (`AuthMeSerializer` expone `platformRole`,
+  `src/modules/auth/presentation/serializers/auth-me.serializer.ts:101`; el
+  guard lo lee fresco de DB vía `JwtStrategy` en cada request).
+- **Pendiente (frontend)**: reemplazar el sondeo de `isSuperAdmin()`
+  ([src/lib/api/backoffice.ts](../src/lib/api/backoffice.ts)) por la lectura
   del perfil en [src/lib/dashboard-context.ts](../src/lib/dashboard-context.ts).
 
-### 1.2 🔴 `PATCH /organizations/:orgId` para el Company Owner
+### 1.2 ✅ RESUELTO — `PATCH /organizations/:orgId` para el Company Owner
 
-- **Hoy**: el permiso `MANAGE_ORGANIZATION` existe en la matriz, pero el único
-  PATCH de organización expuesto es `PATCH /backoffice/organizations/:orgId`
-  (solo SUPER_ADMIN). `OrganizationAdminController` no tiene endpoint de
-  actualización.
-- **Impacto**: la vista Configuración (editar nombre, prevista en el mapa de
-  fase 1 como ✅ para Owner) devuelve 404. El formulario ya existe y muestra un
-  mensaje explicativo ([settings-form.tsx](../src/app/(dashboard)/org/%5BorgId%5D/settings/settings-form.tsx),
-  manejo del 404 en [actions.ts](../src/app/(dashboard)/org/%5BorgId%5D/actions.ts) → `renameOrganizationAction`).
-- **Cambio propuesto**: `PATCH /organizations/:orgId` con
-  `@OrganizationProtected(MANAGE_ORGANIZATION)` aceptando `{ name }` (y
-  decidir si `status` se permite fuera de backoffice).
-- **Al implementarse**: no hay cambios de frontend — ya llama a esa ruta.
+- **Estado**: implementado en el API (`organization-admin.controller.ts:89`,
+  `@OrganizationProtected(MANAGE_ORGANIZATION)`, DTO restringido a `{ name }`).
+  El frontend ya llama a esa ruta; el rename funciona.
+- **Pendiente (frontend)**: eliminar el fallback del 404 en
+  [actions.ts](../src/app/(dashboard)/org/%5BorgId%5D/actions.ts) →
+  `renameOrganizationAction` (código muerto). Nota: `status` NO se acepta en la
+  ruta org-scoped (la whitelist del ValidationPipe lo descarta en silencio);
+  cambiar el estado sigue siendo solo backoffice.
+
+### 1.2b ✅ RESUELTO (2026-07-21) — contrato de `GET /organizations/:orgId/users`
+
+- **Era el bloqueante real de fase 1**: la vista consolidada omitía `id` (todas
+  las filas), `identifier` (filas de membresía) y `membershipId` (filas de
+  invitación) — `JSON.stringify` elimina claves `undefined` y
+  `organizationUserSchema` del dashboard las exige presentes → toda la página
+  de Usuarios moría con SchemaMismatch en el primer render.
+- **Fix aplicado en el API**: `OrganizationUserView` ahora declara todas las
+  claves como requeridas-nullable (el compilador fuerza el contrato) y los
+  mappers de `list-organization-users.useCase.ts` emiten `null` explícito;
+  `id` = id de la membresía o de la invitación según la fuente.
 
 ### 1.3 🟡 Bootstrap del primer admin de una hija por el partner
 
@@ -193,8 +195,9 @@ Sin esto, las vistas seguirán ocultas (ver [frontend-phase1-map.md](./frontend-
 
 ## 3. Orden sugerido de ataque
 
-1. **Backend 1.1 + 1.2** (platformRole y PATCH de org) — pequeños y quitan los
-   dos workarounds visibles del dashboard.
+1. ~~**Backend 1.1 + 1.2**~~ ✅ hechos en el API (queda limpiar los dos
+   workarounds del frontend: sondeo de `isSuperAdmin()` y fallback 404 del
+   rename).
 2. **Frontend 2.1** (prueba E2E contra el API real, error/loading boundaries,
    401 en actions, commit) — cierra fase 1 de verdad.
 3. **Backend 1.4 + frontend 8/9** (paginación y búsqueda) — antes de que un
