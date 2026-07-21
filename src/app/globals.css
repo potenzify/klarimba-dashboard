@@ -1,26 +1,153 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Paleta Klarimba (mockup dashboard.html) */
+  --background: #f7f5fb;
+  --foreground: #1e1b24;
+  --card: #ffffff;
+  --card-foreground: #1e1b24;
+  --popover: #ffffff;
+  --popover-foreground: #1e1b24;
+  --primary: #6b3fa0;
+  --primary-foreground: #ffffff;
+  --secondary: #f2edf7;
+  --secondary-foreground: #4a2b73;
+  --muted: #f2edf7;
+  --muted-foreground: #8a8494;
+  --accent: #f2edf7;
+  --accent-foreground: #4a2b73;
+  --destructive: #c4485b;
+  --destructive-foreground: #ffffff;
+  --border: #e7e0ef;
+  --input: #e7e0ef;
+  --ring: #9b7bc4;
+  --radius: 0.875rem;
+
+  /* Tokens semánticos extra del mockup */
+  --success: #2e9e6b;
+  --success-soft: #e6f4ec;
+  --warning: #c98a1e;
+  --warning-soft: #fbf1dd;
+  --destructive-soft: #fbe9ec;
+  --brand-dark: #4a2b73;
+  --brand-mid: #9b7bc4;
+
+  --chart-1: #6b3fa0;
+  --chart-2: #3d9ae8;
+  --chart-3: #e8a33d;
+  --chart-4: #3dc08a;
+  --chart-5: #e85d8a;
+
+  --sidebar: #ffffff;
+  --sidebar-foreground: #56505f;
+  --sidebar-primary: #6b3fa0;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f2edf7;
+  --sidebar-accent-foreground: #4a2b73;
+  --sidebar-border: #e7e0ef;
+  --sidebar-ring: #9b7bc4;
+}
+
+.dark {
+  --background: #17141d;
+  --foreground: #ece8f2;
+  --card: #211d29;
+  --card-foreground: #ece8f2;
+  --popover: #211d29;
+  --popover-foreground: #ece8f2;
+  --primary: #9b7bc4;
+  --primary-foreground: #17141d;
+  --secondary: #2c2637;
+  --secondary-foreground: #d8cce6;
+  --muted: #2c2637;
+  --muted-foreground: #8a8494;
+  --accent: #2c2637;
+  --accent-foreground: #d8cce6;
+  --destructive: #e07285;
+  --destructive-foreground: #17141d;
+  --border: #322b3f;
+  --input: #322b3f;
+  --ring: #9b7bc4;
+
+  --success: #4dbb8a;
+  --success-soft: #1c3129;
+  --warning: #e0a94d;
+  --warning-soft: #362b17;
+  --destructive-soft: #3a2229;
+  --brand-dark: #d8cce6;
+  --brand-mid: #9b7bc4;
+
+  --sidebar: #211d29;
+  --sidebar-foreground: #b9b3c4;
+  --sidebar-primary: #9b7bc4;
+  --sidebar-primary-foreground: #17141d;
+  --sidebar-accent: #2c2637;
+  --sidebar-accent-foreground: #d8cce6;
+  --sidebar-border: #322b3f;
+  --sidebar-ring: #9b7bc4;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-destructive-soft: var(--destructive-soft);
+  --color-brand-dark: var(--brand-dark);
+  --color-brand-mid: var(--brand-mid);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
   }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
 }
