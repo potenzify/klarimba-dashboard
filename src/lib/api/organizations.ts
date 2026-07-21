@@ -54,12 +54,12 @@ export async function getOrganizationEntitlements(
 }
 
 /**
- * PATCH de la propia organización. Hoy el API solo expone este PATCH en
- * backoffice (gap conocido); si devuelve 404, la vista lo comunica.
+ * PATCH de la propia organización (permiso MANAGE_ORGANIZATION). La ruta
+ * org-scoped solo acepta `name`; cambiar `status` es solo backoffice.
  */
 export async function updateOrganization(
   orgId: string,
-  input: UpdateOrganizationInput,
+  input: Pick<UpdateOrganizationInput, "name">,
 ): Promise<Organization> {
   return apiFetch(`/organizations/${orgId}`, {
     method: "PATCH",

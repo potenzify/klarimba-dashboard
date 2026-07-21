@@ -17,20 +17,19 @@ workaround · 🟢 mejora / fase 2.
 - **Estado**: implementado en el API (`AuthMeSerializer` expone `platformRole`,
   `src/modules/auth/presentation/serializers/auth-me.serializer.ts:101`; el
   guard lo lee fresco de DB vía `JwtStrategy` en cada request).
-- **Pendiente (frontend)**: reemplazar el sondeo de `isSuperAdmin()`
-  ([src/lib/api/backoffice.ts](../src/lib/api/backoffice.ts)) por la lectura
-  del perfil en [src/lib/dashboard-context.ts](../src/lib/dashboard-context.ts).
+- **Frontend**: ya migrado — [dashboard-context.ts](../src/lib/dashboard-context.ts)
+  lee `platformRole` de `/auth/me`; el sondeo `isSuperAdmin()` fue eliminado de
+  [backoffice.ts](../src/lib/api/backoffice.ts).
 
 ### 1.2 ✅ RESUELTO — `PATCH /organizations/:orgId` para el Company Owner
 
 - **Estado**: implementado en el API (`organization-admin.controller.ts:89`,
   `@OrganizationProtected(MANAGE_ORGANIZATION)`, DTO restringido a `{ name }`).
   El frontend ya llama a esa ruta; el rename funciona.
-- **Pendiente (frontend)**: eliminar el fallback del 404 en
-  [actions.ts](../src/app/(dashboard)/org/%5BorgId%5D/actions.ts) →
-  `renameOrganizationAction` (código muerto). Nota: `status` NO se acepta en la
-  ruta org-scoped (la whitelist del ValidationPipe lo descarta en silencio);
-  cambiar el estado sigue siendo solo backoffice.
+- **Frontend**: fallback del 404 eliminado de `renameOrganizationAction`;
+  `updateOrganization` org-scoped ahora tipa solo `{ name }`. Nota: `status` NO
+  se acepta en la ruta org-scoped (la whitelist del ValidationPipe lo descarta
+  en silencio); cambiar el estado sigue siendo solo backoffice.
 
 ### 1.2b ✅ RESUELTO (2026-07-21) — contrato de `GET /organizations/:orgId/users`
 
@@ -195,9 +194,8 @@ Sin esto, las vistas seguirán ocultas (ver [frontend-phase1-map.md](./frontend-
 
 ## 3. Orden sugerido de ataque
 
-1. ~~**Backend 1.1 + 1.2**~~ ✅ hechos en el API (queda limpiar los dos
-   workarounds del frontend: sondeo de `isSuperAdmin()` y fallback 404 del
-   rename).
+1. ~~**Backend 1.1 + 1.2**~~ ✅ hechos en el API y frontend ya limpio (sin
+   sondeo de `isSuperAdmin()`, sin fallback 404 del rename).
 2. **Frontend 2.1** (prueba E2E contra el API real, error/loading boundaries,
    401 en actions, commit) — cierra fase 1 de verdad.
 3. **Backend 1.4 + frontend 8/9** (paginación y búsqueda) — antes de que un

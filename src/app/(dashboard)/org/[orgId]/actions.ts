@@ -162,13 +162,6 @@ export async function renameOrganizationAction(
     revalidatePath(`/org/${parsed.data.orgId}`, "layout");
     return { ok: true };
   } catch (error) {
-    if (error instanceof ApiError && error.status === 404) {
-      return {
-        ok: false,
-        error:
-          "El API aún no expone la edición del nombre para administradores de la organización (hoy solo backoffice). Contacta al equipo de Klarimba.",
-      };
-    }
     return toActionError(error);
   }
 }
