@@ -167,19 +167,19 @@ Sin esto, las vistas seguirán ocultas (ver [frontend-phase1-map.md](./frontend-
 
 | # | Pendiente | Detalle |
 |---|---|---|
-| 1 | **Probar el flujo completo contra el API real** | El API no estaba corriendo durante el desarrollo. Verificado: build, typecheck, redirects del middleware y render del login. Falta ejercitar: login/logout, refresh del token, cada vista con datos reales, errores de dominio (p. ej. "Insufficient Seats") y el canje visual de estados. |
-| 2 | **Commit inicial** | El repo git está inicializado (create-next-app) pero todos los cambios están sin commitear. |
-| 3 | **`error.tsx` y `not-found.tsx` personalizados** | Hoy un fallo del API fuera de los casos manejados cae en el error overlay por defecto de Next. Añadir error boundaries por segmento con mensaje amable y botón de reintento; `global-error.tsx` para fallos del layout. |
-| 4 | **`loading.tsx` / Suspense por ruta** | No hay skeletons; la navegación entre vistas bloquea hasta resolver los fetches. Usar los `Skeleton` de shadcn ya instalados. |
-| 5 | **Manejo de 401 en server actions** | Si la sesión muere a mitad de una acción (token blacklisteado), la acción devuelve el error crudo. Detectar `ApiError.isUnauthorized` en las actions y redirigir a `/login?expired=1`. |
-| 6 | **Tamaño de la cookie de sesión** | La cookie sellada guarda access + refresh token. Si los JWT del API crecen (claims extra), puede acercarse al límite de 4 KB por cookie. Verificar con tokens reales; si aplica, dividir en dos cookies o guardar solo identificadores. |
+| 1 | 🔴 **Probar el flujo completo contra el API real** | Único bloqueante que queda. Verificado hasta hoy: build, typecheck, lint, redirects del middleware, render del login, `not-found` (404 real con la copia propia) y el camino 401 del layout → `/login?expired=1` (ejercitado contra el API respondiendo 401 a un token inválido). Falta ejercitar **con credenciales reales**: login/logout, refresh del token, cada vista con datos, errores de dominio (p. ej. "Insufficient Seats") y el canje visual de estados. |
+| 2 | ✅ ~~Commit inicial~~ | Hecho. El repo tiene historia desde `862cf21`. |
+| 3 | ✅ ~~`error.tsx` y `not-found.tsx` personalizados~~ | Hecho: [error.tsx](../src/app/error.tsx) raíz, [(dashboard)/error.tsx](../src/app/(dashboard)/error.tsx), [global-error.tsx](../src/app/global-error.tsx), [not-found.tsx](../src/app/not-found.tsx) raíz y [(dashboard)/not-found.tsx](../src/app/(dashboard)/not-found.tsx), sobre un [ErrorState](../src/components/layout/error-state.tsx) común. Usan el prop `unstable_retry` (Next ≥16.2), no el `reset` de versiones anteriores. **Nota**: ante un fallo de SSR, Next devuelve su documento `__next_error__` y el boundary monta en cliente al hidratar; por eso `curl` no ve el mensaje aunque el usuario sí. |
+| 4 | ✅ ~~`loading.tsx` / Suspense por ruta~~ | Hecho: [(dashboard)/loading.tsx](../src/app/(dashboard)/loading.tsx) cubre todas las vistas del segmento. Skeleton neutro (cabecera + tarjetas + bloque) porque el mismo fallback sirve a vistas de tarjetas y de tabla. No aplica a la primera carga: el `layout.tsx` del propio segmento resuelve sesión y contextos antes, y Next no muestra fallback para el layout de su segmento. |
+| 5 | ✅ ~~Manejo de 401 en server actions~~ | Hecho: `toActionError` en [action-result.ts](../src/lib/action-result.ts) redirige a `/login?expired=1` ante un `ApiError` 401; lo usan las actions de org y de backoffice. `inviteByEmailAction` lo comprueba tras el `Promise.all` (si la sesión murió fallan los 50 correos por lo mismo). El login mantiene su propio manejo: ahí un 401 es "credenciales incorrectas", no sesión expirada. |
+| 6 | 🟡 **Tamaño de la cookie de sesión** | Mitigado, no cerrado. `warnIfSessionCookieTooLarge` ([session.ts](../src/lib/session.ts)) avisa en logs al superar el 80% de los 4 KB, tras el login y tras cada refresh del middleware — al pasarse, el navegador descarta la cookie **en silencio**. Medido con tokens de prueba: 329 B. Falta medir con JWT reales; si crecen, partir en dos cookies o guardar solo un identificador. |
 
 ### 2.2 🟡 Robustez y calidad
 
 | # | Pendiente | Detalle |
 |---|---|---|
 | 7 | **Tests** | No hay ninguno. Mínimo recomendado: unit para `permissions.ts`, `dashboard-context` (resolución de modos), `http.ts` (envelope + errores 422/dominio) y `format.ts`; E2E con Playwright para login → invitar → revocar contra un API seed. |
-| 8 | **Paginación de tablas** | Depende del punto 1.4 de backend. Mientras tanto, mostrar aviso si un listado devuelve exactamente 100 filas (posible truncamiento). |
+| 8 | **Paginación de tablas** | Depende del punto 1.4 de backend. Mitigado mientras tanto: [TruncationNotice](../src/components/dashboard/truncation-notice.tsx) avisa cuando un listado llega al límite de la página (Usuarios, Overview de plataforma, Clientes y Partners). El truncamiento ya no es silencioso, pero sigue sin haber forma de ver la fila 101. |
 | 9 | **Búsqueda en Usuarios y Clientes** | El mockup no la dibuja pero con >20 filas es necesaria. Client-side sobre lo cargado como primer paso; server-side cuando el API lo soporte. |
 | 10 | **Estados optimistas** | Las acciones (revocar, reactivar, asignar) esperan el roundtrip completo. Valorar `useOptimistic` en la tabla de usuarios. |
 | 11 | **Toggle de dark mode** | El tema oscuro está definido en `globals.css` y `next-themes` instalado (dependencia de shadcn), pero no hay `ThemeProvider` ni toggle. Decidir si se expone o se elimina la variante `.dark`. |
@@ -212,12 +212,15 @@ Sin esto, las vistas seguirán ocultas (ver [frontend-phase1-map.md](./frontend-
 
 ## 3. Orden sugerido de ataque
 
-1. ~~**Backend 1.1 + 1.2**~~ ✅ hechos en el API y frontend ya limpio (sin
-   sondeo de `isSuperAdmin()`, sin fallback 404 del rename).
-2. **Frontend 2.1** (prueba E2E contra el API real, error/loading boundaries,
-   401 en actions, commit) — cierra fase 1 de verdad.
+1. ~~**Backend 1.1 + 1.2 + 1.2b + 1.2c**~~ ✅ hechos en el API y frontend ya
+   limpio (sin sondeo de `isSuperAdmin()`, sin fallback 404 del rename, sin
+   cruce de `/users` con `/invitations`).
+2. ~~**Frontend 2.1 #2–#6**~~ ✅ error/loading boundaries, 401 en actions,
+   aviso de cookie grande y commits. **Queda el #1**: la prueba con
+   credenciales reales es lo único que separa a fase 1 de estar cerrada.
 3. **Backend 1.4 + frontend 8/9** (paginación y búsqueda) — antes de que un
-   cliente pase de 100 usuarios.
+   cliente pase de 100 usuarios. El aviso de truncamiento compra tiempo, no
+   resuelve.
 4. **Backend 1.3 + frontend 16–18** (bootstrap por partner y códigos batch) —
    completa los flujos operativos de ARL y de invitación masiva.
 5. Resto de 🟢 según prioridad de producto.

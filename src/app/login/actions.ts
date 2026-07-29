@@ -1,9 +1,14 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { loginApi } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/http";
 import { loginInputSchema, type LoginInput } from "@/lib/api/schemas";
+import {
+  getSessionOptions,
+  warnIfSessionCookieTooLarge,
+} from "@/lib/session";
 import { getSession } from "@/lib/session.server";
 
 export interface LoginActionResult {
@@ -38,6 +43,9 @@ export async function loginAction(
   session.accessToken = tokens.accessToken;
   session.refreshAccessToken = tokens.refreshAccessToken;
   await session.save();
+  warnIfSessionCookieTooLarge(
+    (await cookies()).get(getSessionOptions().cookieName)?.value,
+  );
 
   // Solo rutas internas para evitar open redirects.
   const target = next && next.startsWith("/") && !next.startsWith("//") ? next : "/";

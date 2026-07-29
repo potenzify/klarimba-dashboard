@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   decodeJwtExp,
   getSessionOptions,
+  warnIfSessionCookieTooLarge,
   type SessionData,
 } from "@/lib/session";
 
@@ -72,6 +73,9 @@ export default async function proxy(request: NextRequest) {
       session.accessToken = tokens.accessToken;
       session.refreshAccessToken = tokens.refreshAccessToken;
       await session.save();
+      warnIfSessionCookieTooLarge(
+        response.cookies.get(getSessionOptions().cookieName)?.value,
+      );
       return response;
     }
     // Refresh fallido → sesión inválida, de vuelta al login.

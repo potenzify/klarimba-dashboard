@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { ApiError } from "@/lib/api/http";
 import {
   bootstrapOrgAdmin,
   createBackofficeOrganization,
@@ -17,12 +16,7 @@ import {
   createSeatGrantInputSchema,
   organizationStatusSchema,
 } from "@/lib/api/schemas";
-import type { ActionResult } from "@/lib/action-result";
-
-function toActionError(error: unknown): ActionResult<never> {
-  if (error instanceof ApiError) return { ok: false, error: error.message };
-  throw error;
-}
+import { toActionError, type ActionResult } from "@/lib/action-result";
 
 const orgIdSchema = z.string().uuid();
 

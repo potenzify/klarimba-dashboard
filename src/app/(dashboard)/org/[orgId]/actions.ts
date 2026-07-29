@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 import { ApiError } from "@/lib/api/http";
 import {
@@ -18,14 +19,11 @@ import {
   createSeatGrantInputSchema,
   organizationRoleSchema,
 } from "@/lib/api/schemas";
-import type { ActionResult } from "@/lib/action-result";
-
-function toActionError(error: unknown): ActionResult<never> {
-  if (error instanceof ApiError) {
-    return { ok: false, error: error.message };
-  }
-  throw error;
-}
+import {
+  isSessionExpired,
+  toActionError,
+  type ActionResult,
+} from "@/lib/action-result";
 
 const orgIdSchema = z.string().uuid();
 
@@ -61,7 +59,7 @@ export async function inviteByEmailAction(
   const { orgId, emails, roleToGrant } = parsed.data;
 
   const results = await Promise.all(
-    emails.map(async (email) => {
+    emails.map(async (email): Promise<{ email: string; error: ApiError | null }> => {
       try {
         await createInvitation(orgId, {
           type: "PERSONAL",
@@ -71,11 +69,17 @@ export async function inviteByEmailAction(
         });
         return { email, error: null };
       } catch (error) {
-        if (error instanceof ApiError) return { email, error: error.message };
+        if (error instanceof ApiError) return { email, error };
         throw error;
       }
     }),
   );
+
+  // Si la sesión murió, fallaron todos por lo mismo: no tiene sentido listar 50
+  // errores idénticos. Fuera del try/catch de arriba porque `redirect` lanza.
+  if (results.some((r) => isSessionExpired(r.error))) {
+    redirect("/login?expired=1");
+  }
 
   revalidatePath(`/org/${orgId}/users`);
   return {
@@ -84,7 +88,7 @@ export async function inviteByEmailAction(
       sent: results.filter((r) => !r.error).map((r) => r.email),
       failed: results
         .filter((r) => r.error)
-        .map((r) => ({ email: r.email, error: r.error! })),
+        .map((r) => ({ email: r.email, error: r.error!.message })),
     },
   };
 }

@@ -1,4 +1,5 @@
 import { Lock } from "lucide-react";
+import { TruncationNotice } from "@/components/dashboard/truncation-notice";
 import { PageHeader } from "@/components/layout/page-header";
 import { listOrganizationUsers } from "@/lib/api/organizations";
 import {
@@ -46,6 +47,7 @@ export default async function UsersPage({
         allUsers={users}
         activeFilter={statusFilter}
       />
+      <TruncationNotice count={users.length} limit={100} noun="personas" />
       <p className="mt-3 flex items-center gap-2 text-[11.5px] text-muted-foreground">
         <Lock className="size-3.5 shrink-0 text-brand-mid" />A nivel individual
         solo se ve el estado operativo: rol, acceso y licencia. Nunca diario,

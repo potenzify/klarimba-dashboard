@@ -29,6 +29,29 @@ export function getSessionOptions(): SessionOptions {
   };
 }
 
+/** Límite por cookie que aplican los navegadores. */
+const COOKIE_BYTE_LIMIT = 4096;
+
+/**
+ * La cookie sellada guarda access + refresh token. Si el API añade claims al
+ * JWT puede acercarse al límite de 4 KB, y al pasarlo el navegador **descarta
+ * la cookie en silencio**: el usuario aparece deslogueado sin ningún error.
+ *
+ * No podemos evitarlo desde aquí, pero sí hacerlo ruidoso. Si esto empieza a
+ * salir en los logs, toca partir la sesión en dos cookies o guardar solo un
+ * identificador y mover los tokens a un store de servidor.
+ */
+export function warnIfSessionCookieTooLarge(value: string | undefined): void {
+  if (!value) return;
+  const bytes = new TextEncoder().encode(value).length;
+  if (bytes > COOKIE_BYTE_LIMIT * 0.8) {
+    console.warn(
+      `[session] La cookie de sesión ocupa ${bytes} B de los ${COOKIE_BYTE_LIMIT} B ` +
+        "que admite el navegador. Al superarlos se descarta en silencio y la sesión se pierde.",
+    );
+  }
+}
+
 /** Decodifica el `exp` (unix seconds) de un JWT sin verificar la firma. */
 export function decodeJwtExp(token: string): number | null {
   try {

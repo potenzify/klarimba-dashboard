@@ -1,6 +1,7 @@
 import { Building2, CheckCircle2, Shield, Users2 } from "lucide-react";
 import Link from "next/link";
 import { StatusPill, orgStatusPill } from "@/components/dashboard/status-pill";
+import { TruncationNotice } from "@/components/dashboard/truncation-notice";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -94,6 +95,11 @@ export default async function AdminOverviewPage() {
         </CardContent>
       </Card>
 
+      <TruncationNotice
+        count={organizations.length}
+        limit={100}
+        noun="organizaciones"
+      />
       <p className="mt-4 text-[11.5px] text-muted-foreground">
         Toda acción del backoffice queda registrada en la auditoría de cada
         organización.

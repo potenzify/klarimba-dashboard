@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { StatusPill, orgStatusPill } from "@/components/dashboard/status-pill";
+import { TruncationNotice } from "@/components/dashboard/truncation-notice";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -121,6 +122,11 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
           )}
         </CardContent>
       </Card>
+      <TruncationNotice
+        count={organizations.length}
+        limit={100}
+        noun="organizaciones"
+      />
     </>
   );
 }

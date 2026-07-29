@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { StatusPill, orgStatusPill } from "@/components/dashboard/status-pill";
+import { TruncationNotice } from "@/components/dashboard/truncation-notice";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -80,6 +81,7 @@ export default async function PartnersPage() {
           </p>
         </CardContent>
       </Card>
+      <TruncationNotice count={partners.length} limit={100} noun="partners" />
     </>
   );
 }
