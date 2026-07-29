@@ -76,19 +76,31 @@ workaround · 🟢 mejora / fase 2.
   [create-company-dialog.tsx](../src/app/(dashboard)/org/%5BorgId%5D/companies/create-company-dialog.tsx)
   y una acción en `actions.ts`.
 
-### 1.4 🟡 Paginación real en los listados
+### 1.4 ✅ RESUELTO (2026-07-29) — Paginación real en los listados
 
-- **Hoy**: los listados aceptan `?limit&offset` (default 20, máx 100) pero el
-  envelope no devuelve `pagination` poblado (total de registros).
-- **Impacto**: el frontend trae `limit=100` y filtra/cuenta en memoria
-  ([users/page.tsx](../src/app/(dashboard)/org/%5BorgId%5D/users/page.tsx),
-  [admin/page.tsx](../src/app/(dashboard)/admin/page.tsx)). Con >100 usuarios u
-  organizaciones, la vista queda truncada **silenciosamente**.
-- **Cambio propuesto**: poblar `pagination: { total, limit, offset }` en los
-  listados B2B (`GET .../users`, `GET .../invitations`, `GET .../members`,
-  `GET /backoffice/organizations`, `GET .../audit-log`, `GET .../seat-grants`).
-- **Al implementarse**: añadir paginación de servidor a las tablas (el cliente
-  `apiFetch` ya parsea el envelope; hay que exponer `pagination` en su retorno).
+- **Cambio aplicado en el API**: los siete GET de listado B2B (`.../users`,
+  `.../invitations`, `.../members`, `.../audit-log` en ambos scopes,
+  `GET /backoffice/organizations`, `.../seat-grants`) pueblan
+  `pagination: { total, limit, offset }` en el envelope. Mecánica: los
+  repositorios pasan a `findAndCount`, los use cases dejan la paginación en el
+  store CLS (`setResponsePagination`, `src/shared/app/pagination/`) y el
+  `ResponseInterceptor` — que siempre la leyó de ahí — por fin la encuentra.
+  En `/users` (vista consolidada) el total suma membresías filtradas +
+  invitaciones pendientes. Swagger la documenta vía `PagePaginationSerializer`
+  (el decorador `@Serializer` ahora acepta una clase en `withPagination`).
+- **Cambio de orden**: `GET /backoffice/organizations` pasa de `createdAt ASC`
+  a `DESC` — era el único listado ASC del módulo y con paginación real las
+  altas recientes deben vivir en la página 1 (el overview depende de esto).
+- **Frontend**: `apiFetchPage` expone `{ items, pagination }`
+  ([http.ts](../src/lib/api/http.ts)); Usuarios, Clientes y Partners paginan
+  en servidor con `?page=` ([TablePagination](../src/components/dashboard/table-pagination.tsx));
+  los contadores de chips y los KPIs del overview usan sondas `limit=1` que
+  leen `pagination.total` en vez de contar 100 filas en memoria. Si el API no
+  envía `pagination` (sin desplegar), la vista degrada: chips sin número,
+  KPIs en "—" y un aviso de posible truncamiento en lugar del navegador de
+  páginas — verificado contra el API dev sin el cambio.
+- **Despliegue**: API primero. Con el API viejo el dashboard funciona en modo
+  degradado; al desplegar el API la paginación aparece sola.
 
 ### 1.5 🟡 Contrato del refresh token y logout (header vs cookie)
 
@@ -167,7 +179,7 @@ Sin esto, las vistas seguirán ocultas (ver [frontend-phase1-map.md](./frontend-
 
 | # | Pendiente | Detalle |
 |---|---|---|
-| 1 | 🟡 **Probar el flujo completo contra el API real** | Mayormente verificado (2026-07-29, `api.dev.klarimba.app`, build de producción, usuario COMPANY_OWNER de Giunti Psychometrics). **Verificado**: login real (201), sesión sellada y aceptada por el middleware, `/auth/me` con `platformRole`, `/me/organizations`, las 7 vistas de organización renderizando con datos reales sin caer en el boundary de error, el filtro `?status=INVITED`, `not-found` para una org inexistente, y el 401 del layout → `/login?expired=1`. La tabla de Usuarios muestra el `invitationCode` real (`XDU3D2XU`) en la fila INVITED y `null` en la ACTIVE. **Falta**: el camino de escritura (server actions: invitar, revocar, reactivar, renombrar), logout, el refresh del token cerca de expirar, los errores de dominio ("Insufficient Seats") y las vistas de backoffice (el usuario de prueba no es SUPER_ADMIN). Las escrituras no se ejercitaron porque invitar dispara un correo real. |
+| 1 | 🟡 **Probar el flujo completo contra el API real** | Mayormente verificado (2026-07-29, `api.dev.klarimba.app`, build de producción, usuario COMPANY_OWNER de Giunti Psychometrics). **Verificado**: login real (201), sesión sellada y aceptada por el middleware, `/auth/me` con `platformRole`, `/me/organizations`, las 7 vistas de organización renderizando con datos reales sin caer en el boundary de error, el filtro `?status=INVITED`, `not-found` para una org inexistente, y el 401 del layout → `/login?expired=1`. La tabla de Usuarios muestra el `invitationCode` real (`XDU3D2XU`) en la fila INVITED y `null` en la ACTIVE. **Verificado además por el E2E (5/5 verdes)**: invitar → copiar código → revocar invitación y logout (correos a `@example.com`, sin buzón real). **Falta**: reactivar/renombrar/revocar membresía, el refresh del token cerca de expirar, los errores de dominio ("Insufficient Seats") y las vistas de backoffice (el usuario de prueba no es SUPER_ADMIN). |
 | 2 | ✅ ~~Commit inicial~~ | Hecho. El repo tiene historia desde `862cf21`. |
 | 3 | ✅ ~~`error.tsx` y `not-found.tsx` personalizados~~ | Hecho: [error.tsx](../src/app/error.tsx) raíz, [(dashboard)/error.tsx](../src/app/(dashboard)/error.tsx), [global-error.tsx](../src/app/global-error.tsx), [not-found.tsx](../src/app/not-found.tsx) raíz y [(dashboard)/not-found.tsx](../src/app/(dashboard)/not-found.tsx), sobre un [ErrorState](../src/components/layout/error-state.tsx) común. Usan el prop `unstable_retry` (Next ≥16.2), no el `reset` de versiones anteriores. **Nota**: ante un fallo de SSR, Next devuelve su documento `__next_error__` y el boundary monta en cliente al hidratar; por eso `curl` no ve el mensaje aunque el usuario sí. |
 | 4 | ✅ ~~`loading.tsx` / Suspense por ruta~~ | Hecho: [(dashboard)/loading.tsx](../src/app/(dashboard)/loading.tsx) cubre todas las vistas del segmento. Skeleton neutro (cabecera + tarjetas + bloque) porque el mismo fallback sirve a vistas de tarjetas y de tabla. No aplica a la primera carga: el `layout.tsx` del propio segmento resuelve sesión y contextos antes, y Next no muestra fallback para el layout de su segmento. **Efecto secundario medido**: al abrir el stream de inmediato, un `notFound()` dentro de un `page.tsx` ya no puede fijar el status HTTP — `/org/<uuid-inexistente>` responde **200 con `<meta name="robots" content="noindex">`** en vez de 404. La UI que ve el usuario es la correcta; solo cambia el código de respuesta. Irrelevante aquí (consola autenticada, sin superficie SEO); si alguna vez hiciera falta el 404 real, la comprobación tendría que subir al `proxy.ts`. |
@@ -178,8 +190,8 @@ Sin esto, las vistas seguirán ocultas (ver [frontend-phase1-map.md](./frontend-
 
 | # | Pendiente | Detalle |
 |---|---|---|
-| 7 | 🟡 **Tests** | **E2E hecho** ([e2e/](../e2e/), `pnpm e2e`): Playwright recorre login → tabla → invitar → copiar el código → revocar, más not-found y logout, contra el API real. Escribe datos, así que solo apunta a dev; se salta si faltan `E2E_EMAIL`/`E2E_PASSWORD`. **Falta la parte unit**: `permissions.ts`, `dashboard-context` (resolución de modos), `http.ts` (envelope + errores 422/dominio) y `format.ts`. No hay runner de unit todavía — decidir entre Vitest y Jest (el API usa Jest). |
-| 8 | **Paginación de tablas** | Depende del punto 1.4 de backend. Mitigado mientras tanto: [TruncationNotice](../src/components/dashboard/truncation-notice.tsx) avisa cuando un listado llega al límite de la página (Usuarios, Overview de plataforma, Clientes y Partners). El truncamiento ya no es silencioso, pero sigue sin haber forma de ver la fila 101. |
+| 7 | 🟡 **Tests** | **E2E hecho y ejecutado (5/5 verdes, 2026-07-29)** ([e2e/](../e2e/), `pnpm e2e`): Playwright recorre login → tabla → invitar → copiar el código → revocar, más not-found y logout, contra el API dev real. Escribe datos, así que solo apunta a dev; se salta si faltan `E2E_EMAIL`/`E2E_PASSWORD`. **Falta la parte unit**: `permissions.ts`, `dashboard-context` (resolución de modos), `http.ts` (envelope + errores 422/dominio) y `format.ts`. No hay runner de unit todavía — decidir entre Vitest y Jest (el API usa Jest). |
+| 8 | ✅ ~~Paginación de tablas~~ | Hecho con el 1.4: Usuarios, Clientes y Partners paginan en servidor (`?page=`, 20 por página) y el overview del backoffice calcula sus KPIs con totales del API. `TruncationNotice` desapareció: su aviso vive ahora como modo degradado de [TablePagination](../src/components/dashboard/table-pagination.tsx) para cuando el API no envía `pagination`. Los paneles del detalle de cliente (grants `limit=50`, auditoría `limit=30`) siguen sin paginar — el API ya envía su total, es solo UI pendiente. |
 | 9 | **Búsqueda en Usuarios y Clientes** | El mockup no la dibuja pero con >20 filas es necesaria. Client-side sobre lo cargado como primer paso; server-side cuando el API lo soporte. |
 | 10 | **Estados optimistas** | Las acciones (revocar, reactivar, asignar) esperan el roundtrip completo. Valorar `useOptimistic` en la tabla de usuarios. |
 | 11 | **Toggle de dark mode** | El tema oscuro está definido en `globals.css` y `next-themes` instalado (dependencia de shadcn), pero no hay `ThemeProvider` ni toggle. Decidir si se expone o se elimina la variante `.dark`. |
@@ -216,13 +228,13 @@ Sin esto, las vistas seguirán ocultas (ver [frontend-phase1-map.md](./frontend-
    limpio (sin sondeo de `isSuperAdmin()`, sin fallback 404 del rename, sin
    cruce de `/users` con `/invitations`).
 2. ~~**Frontend 2.1 #2–#6**~~ ✅ error/loading boundaries, 401 en actions,
-   cookie medida con tokens reales y commits. Del **#1** queda solo el camino
-   de escritura (server actions), logout, el refresh del token y las vistas de
-   backoffice: hace falta un usuario SUPER_ADMIN y aceptar que invitar dispara
-   un correo real.
-3. **Backend 1.4 + frontend 8/9** (paginación y búsqueda) — antes de que un
-   cliente pase de 100 usuarios. El aviso de truncamiento compra tiempo, no
-   resuelve.
+   cookie medida con tokens reales y commits. Del **#1** quedan el refresh del
+   token, los errores de dominio y las vistas de backoffice (hace falta un
+   usuario SUPER_ADMIN); el camino de escritura ya lo cubre el E2E.
+3. ~~**Backend 1.4 + frontend 8**~~ ✅ paginación real en API y tablas
+   (2026-07-29; falta desplegar el API). Queda el **9** (búsqueda) — ahora que
+   las tablas paginan, buscar del lado del servidor es el siguiente paso
+   natural (el API aún no tiene `?search=`).
 4. **Backend 1.3 + frontend 16–18** (bootstrap por partner y códigos batch) —
    completa los flujos operativos de ARL y de invitación masiva.
 5. Resto de 🟢 según prioridad de producto.

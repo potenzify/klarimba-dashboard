@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { apiFetch } from "@/lib/api/http";
+import { apiFetch, apiFetchPage, type Page } from "@/lib/api/http";
 import {
   invitationSchema,
   membershipSchema,
@@ -73,11 +73,27 @@ export async function updateOrganization(
 export async function listOrganizationUsers(
   orgId: string,
   params: { status?: OrganizationUserStatus } & PageQuery = {},
-): Promise<OrganizationUser[]> {
-  return apiFetch(`/organizations/${orgId}/users`, {
+): Promise<Page<OrganizationUser>> {
+  return apiFetchPage(`/organizations/${orgId}/users`, {
     query: params,
     schema: z.array(organizationUserSchema),
   });
+}
+
+/**
+ * Total de usuarios (por estado) sin traer filas: pide `limit=1` y lee
+ * `pagination.total`. Alimenta los contadores de los chips de filtro.
+ * `null` si el API aún no envía paginación.
+ */
+export async function countOrganizationUsers(
+  orgId: string,
+  status?: OrganizationUserStatus,
+): Promise<number | null> {
+  const { pagination } = await listOrganizationUsers(orgId, {
+    status,
+    limit: 1,
+  });
+  return pagination?.total ?? null;
 }
 
 export async function updateMembership(

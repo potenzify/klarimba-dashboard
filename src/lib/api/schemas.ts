@@ -18,6 +18,18 @@ const baseEntity = z.object({
   deletedAt: apiDateNullable.optional(),
 });
 
+/**
+ * `pagination` del envelope en los listados B2B (`{ total, limit, offset }`).
+ * El API la puebla desde 2026-07; los clientes la tratan como opcional para
+ * tolerar un API sin desplegar.
+ */
+export const pagePaginationSchema = z.object({
+  total: z.number().int().nonnegative(),
+  limit: z.number().int().positive(),
+  offset: z.number().int().nonnegative(),
+});
+export type PagePagination = z.infer<typeof pagePaginationSchema>;
+
 // ---------------------------------------------------------------------------
 // Enums
 // ---------------------------------------------------------------------------

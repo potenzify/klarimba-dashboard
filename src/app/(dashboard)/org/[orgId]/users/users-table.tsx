@@ -64,10 +64,16 @@ const FILTERS: { label: string; value?: OrganizationUserStatus }[] = [
   { label: "Revocados", value: "REVOKED" },
 ];
 
+/** Totales por estado (sondas al API); `null` si el API no informa totales. */
+export type UserStatusCounts = Record<
+  "ALL" | OrganizationUserStatus,
+  number | null
+>;
+
 interface UsersTableProps {
   orgId: string;
   users: OrganizationUser[];
-  allUsers: OrganizationUser[];
+  counts: UserStatusCounts;
   activeFilter?: OrganizationUserStatus;
 }
 
@@ -84,7 +90,7 @@ async function copyToClipboard(text: string): Promise<boolean> {
 export function UsersTable({
   orgId,
   users,
-  allUsers,
+  counts,
   activeFilter,
 }: UsersTableProps) {
   const [confirmRevoke, setConfirmRevoke] = useState<OrganizationUser | null>(
@@ -109,8 +115,7 @@ export function UsersTable({
     else toast.error(`No se pudo copiar. El código es ${code}`);
   }
 
-  const countFor = (value?: OrganizationUserStatus) =>
-    value ? allUsers.filter((u) => u.status === value).length : allUsers.length;
+  const countFor = (value?: OrganizationUserStatus) => counts[value ?? "ALL"];
 
   return (
     <Card>
@@ -118,9 +123,11 @@ export function UsersTable({
         <div className="mb-4 flex flex-wrap items-center gap-2">
           {FILTERS.map((filter) => {
             const isActive = filter.value === activeFilter;
+            // Cambiar de filtro siempre vuelve a la página 1 (sin `?page=`).
             const href = filter.value
               ? `/org/${orgId}/users?status=${filter.value}`
               : `/org/${orgId}/users`;
+            const count = countFor(filter.value);
             return (
               <Link
                 key={filter.label}
@@ -132,7 +139,8 @@ export function UsersTable({
                     : "bg-muted text-muted-foreground hover:bg-secondary hover:text-secondary-foreground",
                 )}
               >
-                {filter.label} · {countFor(filter.value)}
+                {filter.label}
+                {count !== null && ` · ${count}`}
               </Link>
             );
           })}

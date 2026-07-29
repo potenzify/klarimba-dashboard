@@ -1,29 +1,36 @@
 import { Building2, CheckCircle2, Shield, Users2 } from "lucide-react";
 import Link from "next/link";
 import { StatusPill, orgStatusPill } from "@/components/dashboard/status-pill";
-import { TruncationNotice } from "@/components/dashboard/truncation-notice";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { listBackofficeOrganizations } from "@/lib/api/backoffice";
+import {
+  countBackofficeOrganizations,
+  listBackofficeOrganizations,
+} from "@/lib/api/backoffice";
 import { formatApiDate } from "@/lib/format";
 import { CreateClientDialog } from "./create-client-dialog";
 
 export default async function AdminOverviewPage() {
-  const organizations = await listBackofficeOrganizations({ limit: 100 });
+  // KPIs por totales del API (sondas `limit=1`) y altas recientes de la
+  // primera página (el listado viene en DESC). Antes se traían 100 filas y se
+  // contaba en memoria: con >100 clientes los KPIs mentían en silencio.
+  const [{ items: recent }, total, partnerCount, activeCount] =
+    await Promise.all([
+      listBackofficeOrganizations({ limit: 5 }),
+      countBackofficeOrganizations(),
+      countBackofficeOrganizations({ type: "PARTNER" }),
+      countBackofficeOrganizations({ status: "ACTIVE" }),
+    ]);
 
-  const partners = organizations.filter((org) => org.type === "PARTNER");
-  const tenants = organizations.filter((org) => org.type !== "PARTNER");
-  const active = organizations.filter((org) => org.status === "ACTIVE");
-  const recent = [...organizations]
-    .sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt))
-    .slice(0, 5);
+  const tenantCount =
+    total !== null && partnerCount !== null ? total - partnerCount : null;
 
   const kpis = [
-    { label: "Clientes totales", value: organizations.length, icon: Users2 },
-    { label: "Partners / ARL", value: partners.length, icon: Shield },
-    { label: "Empresas directas", value: tenants.length, icon: Building2 },
-    { label: "Activos", value: active.length, icon: CheckCircle2 },
+    { label: "Clientes totales", value: total, icon: Users2 },
+    { label: "Partners / ARL", value: partnerCount, icon: Shield },
+    { label: "Empresas directas", value: tenantCount, icon: Building2 },
+    { label: "Activos", value: activeCount, icon: CheckCircle2 },
   ];
 
   return (
@@ -43,7 +50,7 @@ export default async function AdminOverviewPage() {
                 {kpi.label}
               </div>
               <div className="mt-2 text-[27px] font-bold leading-none tracking-tight">
-                {kpi.value}
+                {kpi.value ?? "—"}
               </div>
             </CardContent>
           </Card>
@@ -95,23 +102,10 @@ export default async function AdminOverviewPage() {
         </CardContent>
       </Card>
 
-      <TruncationNotice
-        count={organizations.length}
-        limit={100}
-        noun="organizaciones"
-      />
       <p className="mt-4 text-[11.5px] text-muted-foreground">
         Toda acción del backoffice queda registrada en la auditoría de cada
         organización.
       </p>
     </>
   );
-}
-
-function toMillis(value: string | number): number {
-  if (typeof value === "number") {
-    return value < 10_000_000_000 ? value * 1000 : value;
-  }
-  const time = new Date(value).getTime();
-  return Number.isNaN(time) ? 0 : time;
 }

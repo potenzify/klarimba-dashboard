@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { StatusPill, orgStatusPill } from "@/components/dashboard/status-pill";
-import { TruncationNotice } from "@/components/dashboard/truncation-notice";
+import {
+  TablePagination,
+  parsePageParam,
+} from "@/components/dashboard/table-pagination";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -23,17 +26,22 @@ const FILTERS = [
   { label: "Partners", value: "PARTNER" as const },
 ];
 
+const PAGE_SIZE = 20;
+
 interface ClientsPageProps {
-  searchParams: Promise<{ type?: string }>;
+  searchParams: Promise<{ type?: string; page?: string }>;
 }
 
 export default async function ClientsPage({ searchParams }: ClientsPageProps) {
-  const { type } = await searchParams;
+  const { type, page: rawPage } = await searchParams;
   const typeFilter = organizationTypeSchema.safeParse(type).data;
-  const organizations = await listBackofficeOrganizations({
-    type: typeFilter,
-    limit: 100,
-  });
+  const page = parsePageParam(rawPage);
+  const { items: organizations, pagination } =
+    await listBackofficeOrganizations({
+      type: typeFilter,
+      limit: PAGE_SIZE,
+      offset: (page - 1) * PAGE_SIZE,
+    });
 
   return (
     <>
@@ -122,9 +130,11 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
           )}
         </CardContent>
       </Card>
-      <TruncationNotice
+      <TablePagination
+        pagination={pagination}
         count={organizations.length}
-        limit={100}
+        basePath="/admin/clients"
+        params={{ type: typeFilter }}
         noun="organizaciones"
       />
     </>

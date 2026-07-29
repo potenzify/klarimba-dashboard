@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { apiFetch } from "@/lib/api/http";
+import { apiFetch, apiFetchPage, type Page } from "@/lib/api/http";
 import {
   auditLogSchema,
   bootstrapAdminResultSchema,
@@ -33,11 +33,27 @@ export async function listBackofficeOrganizations(
     type?: OrganizationType;
     status?: OrganizationStatus;
   } & PageQuery = {},
-): Promise<Organization[]> {
-  return apiFetch("/backoffice/organizations", {
+): Promise<Page<Organization>> {
+  return apiFetchPage("/backoffice/organizations", {
     query: params,
     schema: z.array(organizationSchema),
   });
+}
+
+/**
+ * Total de organizaciones (con filtros) sin traer filas: `limit=1` +
+ * `pagination.total`. Alimenta los KPIs del overview sin depender de traer
+ * el listado completo (que se trunca a 100).
+ */
+export async function countBackofficeOrganizations(params: {
+  type?: OrganizationType;
+  status?: OrganizationStatus;
+} = {}): Promise<number | null> {
+  const { pagination } = await listBackofficeOrganizations({
+    ...params,
+    limit: 1,
+  });
+  return pagination?.total ?? null;
 }
 
 export async function getBackofficeOrganization(

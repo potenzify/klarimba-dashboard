@@ -16,9 +16,12 @@ export function uniqueTestEmail(): string {
 
 export const test = base.extend<{ dashboard: Page }>({
   /** Página ya autenticada, situada en el primer contexto del usuario. */
-  dashboard: async ({ page }, use) => {
+  // El segundo parámetro del fixture se llama `provide` (y no `use`, como en
+  // la docs de Playwright) para que la regla react-hooks no lo confunda con
+  // un hook de React.
+  dashboard: async ({ page }, provide) => {
     await login(page);
-    await use(page);
+    await provide(page);
   },
 });
 

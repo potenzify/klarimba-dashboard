@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { env } from "@/lib/env";
+import { pagePaginationSchema, type PagePagination } from "@/lib/api/schemas";
 import { getSession } from "@/lib/session.server";
 
 /**
@@ -99,14 +100,10 @@ function buildUrl(path: string, query?: QueryParams): string {
   return url.toString();
 }
 
-/**
- * Llama al API de Klarimba, desenvuelve `{ data }` y valida con zod.
- * Solo servidor: el token nunca llega al cliente.
- */
-export async function apiFetch<T>(
+async function apiFetchEnvelope<T>(
   path: string,
   { method = "GET", body, query, schema, auth = true, headers }: ApiFetchOptions<T>,
-): Promise<T> {
+): Promise<{ data: T; pagination: PagePagination | null }> {
   const requestHeaders: Record<string, string> = {
     "Content-Type": "application/json",
     ...headers,
@@ -156,5 +153,42 @@ export async function apiFetch<T>(
       "SchemaMismatch",
     );
   }
-  return parsed.data;
+
+  // Tolerante a propósito: un API sin desplegar no la envía y un cambio de
+  // forma no debe tumbar la vista — la paginación degrada, los datos no.
+  const pagination = envelope.success
+    ? (pagePaginationSchema.safeParse(envelope.data.pagination).data ?? null)
+    : null;
+
+  return { data: parsed.data, pagination };
+}
+
+/**
+ * Llama al API de Klarimba, desenvuelve `{ data }` y valida con zod.
+ * Solo servidor: el token nunca llega al cliente.
+ */
+export async function apiFetch<T>(
+  path: string,
+  options: ApiFetchOptions<T>,
+): Promise<T> {
+  const { data } = await apiFetchEnvelope(path, options);
+  return data;
+}
+
+/** Página de un listado B2B junto a su `pagination` (`null` si el API no la envía). */
+export interface Page<T> {
+  items: T[];
+  pagination: PagePagination | null;
+}
+
+/**
+ * Variante de `apiFetch` para listados paginados: expone el `pagination` del
+ * envelope además de las filas.
+ */
+export async function apiFetchPage<T>(
+  path: string,
+  options: ApiFetchOptions<T[]>,
+): Promise<Page<T>> {
+  const { data, pagination } = await apiFetchEnvelope(path, options);
+  return { items: data, pagination };
 }

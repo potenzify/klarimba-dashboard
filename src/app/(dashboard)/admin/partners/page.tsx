@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { StatusPill, orgStatusPill } from "@/components/dashboard/status-pill";
-import { TruncationNotice } from "@/components/dashboard/truncation-notice";
+import {
+  TablePagination,
+  parsePageParam,
+} from "@/components/dashboard/table-pagination";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -15,10 +18,21 @@ import { listBackofficeOrganizations } from "@/lib/api/backoffice";
 import { formatApiDate } from "@/lib/format";
 import { CreateClientDialog } from "../create-client-dialog";
 
-export default async function PartnersPage() {
-  const partners = await listBackofficeOrganizations({
+const PAGE_SIZE = 20;
+
+interface PartnersPageProps {
+  searchParams: Promise<{ page?: string }>;
+}
+
+export default async function PartnersPage({
+  searchParams,
+}: PartnersPageProps) {
+  const { page: rawPage } = await searchParams;
+  const page = parsePageParam(rawPage);
+  const { items: partners, pagination } = await listBackofficeOrganizations({
     type: "PARTNER",
-    limit: 100,
+    limit: PAGE_SIZE,
+    offset: (page - 1) * PAGE_SIZE,
   });
 
   return (
@@ -81,7 +95,12 @@ export default async function PartnersPage() {
           </p>
         </CardContent>
       </Card>
-      <TruncationNotice count={partners.length} limit={100} noun="partners" />
+      <TablePagination
+        pagination={pagination}
+        count={partners.length}
+        basePath="/admin/partners"
+        noun="partners"
+      />
     </>
   );
 }
