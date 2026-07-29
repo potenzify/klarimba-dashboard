@@ -178,7 +178,7 @@ Sin esto, las vistas seguirán ocultas (ver [frontend-phase1-map.md](./frontend-
 
 | # | Pendiente | Detalle |
 |---|---|---|
-| 7 | **Tests** | No hay ninguno. Mínimo recomendado: unit para `permissions.ts`, `dashboard-context` (resolución de modos), `http.ts` (envelope + errores 422/dominio) y `format.ts`; E2E con Playwright para login → invitar → revocar contra un API seed. |
+| 7 | 🟡 **Tests** | **E2E hecho** ([e2e/](../e2e/), `pnpm e2e`): Playwright recorre login → tabla → invitar → copiar el código → revocar, más not-found y logout, contra el API real. Escribe datos, así que solo apunta a dev; se salta si faltan `E2E_EMAIL`/`E2E_PASSWORD`. **Falta la parte unit**: `permissions.ts`, `dashboard-context` (resolución de modos), `http.ts` (envelope + errores 422/dominio) y `format.ts`. No hay runner de unit todavía — decidir entre Vitest y Jest (el API usa Jest). |
 | 8 | **Paginación de tablas** | Depende del punto 1.4 de backend. Mitigado mientras tanto: [TruncationNotice](../src/components/dashboard/truncation-notice.tsx) avisa cuando un listado llega al límite de la página (Usuarios, Overview de plataforma, Clientes y Partners). El truncamiento ya no es silencioso, pero sigue sin haber forma de ver la fila 101. |
 | 9 | **Búsqueda en Usuarios y Clientes** | El mockup no la dibuja pero con >20 filas es necesaria. Client-side sobre lo cargado como primer paso; server-side cuando el API lo soporte. |
 | 10 | **Estados optimistas** | Las acciones (revocar, reactivar, asignar) esperan el roundtrip completo. Valorar `useOptimistic` en la tabla de usuarios. |

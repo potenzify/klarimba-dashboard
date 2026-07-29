@@ -26,6 +26,39 @@ pnpm dev                     # http://localhost:3000
 Requiere el API corriendo (`../klarimba-api`, por defecto
 `http://localhost:8080/api/v1`; configurable con `KLARIMBA_API_URL`).
 
+## Comprobaciones
+
+```bash
+pnpm lint
+pnpm typecheck
+pnpm build
+pnpm e2e        # Playwright; ver abajo
+```
+
+### E2E
+
+Primera vez (descarga el navegador, ~1 min):
+
+```bash
+pnpm install
+pnpm exec playwright install chromium
+```
+
+`pnpm e2e` levanta un build de producción y recorre el flujo real contra el API
+al que apunte `KLARIMBA_API_URL`: login, tabla de usuarios, invitar → copiar el
+código → revocar, not-found y logout.
+
+Dos avisos:
+
+- **La suite escribe.** Crea una invitación y la revoca al final. Apúntala solo
+  a un entorno de desarrollo, nunca a producción.
+- Necesita `E2E_EMAIL` y `E2E_PASSWORD` de un usuario real de ese entorno. Sin
+  ellas los tests **se saltan** en vez de fallar, para no romper un CI que no
+  tenga credenciales.
+
+Los correos de prueba usan `@example.com` (dominio reservado por RFC 2606, sin
+MX): el API dispara el correo de invitación y no llega a ningún buzón real.
+
 ## Arquitectura
 
 ```
