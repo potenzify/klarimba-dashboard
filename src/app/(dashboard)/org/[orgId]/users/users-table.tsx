@@ -1,7 +1,9 @@
 "use client";
 
 import {
+  Check,
   CheckCircle2,
+  Copy,
   Loader2,
   Mail,
   MoreVertical,
@@ -69,6 +71,16 @@ interface UsersTableProps {
   activeFilter?: OrganizationUserStatus;
 }
 
+/** Copia al portapapeles; `false` si el navegador lo bloquea (contexto inseguro). */
+async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function UsersTable({
   orgId,
   users,
@@ -89,6 +101,12 @@ export function UsersTable({
       if (result.ok) toast.success(successMessage);
       else toast.error(result.error);
     });
+  }
+
+  async function copyCode(code: string) {
+    const copied = await copyToClipboard(code);
+    if (copied) toast.success(`Código ${code} copiado`);
+    else toast.error(`No se pudo copiar. El código es ${code}`);
   }
 
   const countFor = (value?: OrganizationUserStatus) =>
@@ -139,6 +157,7 @@ export function UsersTable({
                 <TableHead>Persona</TableHead>
                 <TableHead>Rol</TableHead>
                 <TableHead>Estado</TableHead>
+                <TableHead>Código</TableHead>
                 <TableHead>Desde</TableHead>
                 <TableHead className="w-10" />
               </TableRow>
@@ -148,6 +167,7 @@ export function UsersTable({
                 const pill = userStatusPill(user.status);
                 const name = user.user ? fullName(user.user) : (user.identifier ?? "—");
                 const email = user.user?.email ?? user.identifier ?? "";
+                const code = user.invitationCode ?? undefined;
                 return (
                   <TableRow key={`${user.status}-${user.membershipId ?? user.invitationId ?? user.id}`}>
                     <TableCell>
@@ -179,6 +199,15 @@ export function UsersTable({
                     <TableCell>
                       <StatusPill tone={pill.tone}>{pill.label}</StatusPill>
                     </TableCell>
+                    <TableCell>
+                      {code ? (
+                        <CopyCodeButton code={code} onCopy={copyCode} />
+                      ) : (
+                        <span className="text-[12.5px] text-muted-foreground">
+                          —
+                        </span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-[12.5px] text-muted-foreground">
                       {formatApiDate(user.joinedAt ?? user.invitedAt)}
                     </TableCell>
@@ -186,6 +215,8 @@ export function UsersTable({
                       <RowActions
                         user={user}
                         disabled={isPending}
+                        code={code}
+                        onCopyCode={() => code && copyCode(code)}
                         onResend={() =>
                           run(
                             () =>
@@ -260,9 +291,46 @@ export function UsersTable({
   );
 }
 
+/**
+ * Código de invitación con copia al portapapeles. Permite repartirlo a mano
+ * (chat, teléfono) sin depender del correo que envía el API.
+ */
+function CopyCodeButton({
+  code,
+  onCopy,
+}: {
+  code: string;
+  onCopy: (code: string) => void | Promise<void>;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  return (
+    <button
+      type="button"
+      onClick={async () => {
+        await onCopy(code);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      }}
+      title="Copiar código"
+      aria-label={`Copiar código de invitación ${code}`}
+      className="inline-flex items-center gap-1.5 rounded-md bg-muted px-2 py-1 font-mono text-[11.5px] font-bold tracking-wider transition-colors hover:bg-secondary hover:text-secondary-foreground"
+    >
+      {code}
+      {copied ? (
+        <Check className="size-3.5 text-brand-mid" />
+      ) : (
+        <Copy className="size-3.5 text-muted-foreground" />
+      )}
+    </button>
+  );
+}
+
 function RowActions({
   user,
   disabled,
+  code,
+  onCopyCode,
   onResend,
   onRevokeInvitation,
   onReactivate,
@@ -270,6 +338,8 @@ function RowActions({
 }: {
   user: OrganizationUser;
   disabled: boolean;
+  code?: string;
+  onCopyCode: () => void;
   onResend: () => void;
   onRevokeInvitation: () => void;
   onReactivate: () => void;
@@ -298,6 +368,12 @@ function RowActions({
       <DropdownMenuContent align="end" className="min-w-48">
         {isInvited && (
           <>
+            {code && (
+              <DropdownMenuItem onSelect={onCopyCode}>
+                <Copy />
+                Copiar código
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onSelect={onResend}>
               <Mail />
               Reenviar invitación

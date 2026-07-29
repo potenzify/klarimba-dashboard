@@ -43,6 +43,24 @@ workaround · 🟢 mejora / fase 2.
   mappers de `list-organization-users.useCase.ts` emiten `null` explícito;
   `id` = id de la membresía o de la invitación según la fuente.
 
+### 1.2c ✅ RESUELTO (2026-07-29) — `invitationCode` en `GET /organizations/:orgId/users`
+
+- **Necesidad**: el correo de invitación que envía el API **no lleva link, lleva
+  el código** (`mail/organizations/invitation.hbs` lo imprime en grande). Para
+  que el equipo pueda repartirlo a mano cuando el correo no llega, la consola
+  necesita mostrarlo y copiarlo desde la tabla de Usuarios.
+- **Cambio aplicado en el API**: `OrganizationUserView` declara
+  `invitationCode: string | null`, el mapper de invitaciones emite
+  `invitation.code` y el de membresías `null` (ya canjeada), y
+  `OrganizationUserSerializer` lo expone. Evita que el frontend tenga que
+  cruzar `/users` con `/invitations` (dos listados con paginación
+  independiente).
+- **Frontend**: columna "Código" con copia al portapapeles en
+  [users-table.tsx](../src/app/(dashboard)/org/%5BorgId%5D/users/users-table.tsx).
+  El campo se valida como `nullish` en `organizationUserSchema` —a diferencia
+  del resto del contrato, que es requerido-nullable— para que un API sin
+  desplegar degrade la columna en vez de tumbar la página.
+
 ### 1.3 🟡 Bootstrap del primer admin de una hija por el partner
 
 - **Hoy**: `POST .../admins` es solo backoffice. La ARL crea la empresa hija y

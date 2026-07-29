@@ -99,8 +99,9 @@ export function InviteDialog({ orgId }: { orgId: string }) {
         <DialogHeader>
           <DialogTitle>Invitar empleados</DialogTitle>
           <DialogDescription>
-            Cada persona recibe un correo para activar su acceso a Klarimba
-            People.
+            Cada persona recibe un correo con un código para activar su acceso a
+            Klarimba People. También puedes copiar el código desde la tabla y
+            compartirlo a mano.
           </DialogDescription>
         </DialogHeader>
         <form

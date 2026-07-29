@@ -178,6 +178,12 @@ export const organizationUserSchema = z.object({
   user: memberUserSchema.nullable(),
   membershipId: z.string().nullable(),
   invitationId: z.string().nullable(),
+  /**
+   * Código de la invitación pendiente; solo en filas con estado INVITED.
+   * `nullish` a propósito: es un campo accesorio y añadido después, así que un
+   * API sin desplegar debe degradar la columna, no tumbar la página entera.
+   */
+  invitationCode: z.string().nullish(),
   joinedAt: apiDateNullable.optional(),
   invitedAt: apiDateNullable.optional(),
 });
