@@ -1,6 +1,9 @@
 # Frontend Fase 1 — Mapa mockup → API
 
-> Checklist para el traspaso de `onboarding_mockup.html` a frontend real: qué vistas tienen respaldo en el API hoy y qué debe **ocultarse** en la fase 1. Contraparte de [b2b-feature.md](./b2b-feature.md) (estado del API) y [b2b-enterprise-plan.md §1.2](./b2b-enterprise-plan.md) (qué está diferido y por qué).
+> Última actualización: 2026-08-16 · Fuente de verdad: este archivo (la copia
+> en `klarimba-api/docs/frontend-phase1-map.md` está desactualizada y no se mantiene).
+>
+> Checklist para el traspaso del mockup [dashboard.html](./dashboard.html) (mockup estático de diseño, no documentación) a frontend real: qué vistas tienen respaldo en el API hoy y qué debe **ocultarse** en la fase 1. Contraparte de [b2b-feature.md](../../klarimba-api/docs/b2b-feature.md) (estado del API) y [b2b-enterprise-plan.md §1.2](../../klarimba-api/docs/b2b-enterprise-plan.md) (qué está diferido y por qué), ambos en `klarimba-api`.
 
 Leyenda: ✅ conectable ya · ⚠️ parcial (recortar) · ❌ ocultar en fase 1.
 

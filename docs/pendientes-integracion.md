@@ -1,5 +1,8 @@
 # Pendientes de integración — Backend y Frontend
 
+> Última actualización: 2026-08-16 · Fuente de verdad (la copia de klarimba-api
+> fue eliminada; este archivo es el único que se mantiene).
+>
 > Backlog para que el dashboard quede plenamente integrado y funcionando.
 > Complementa [frontend-phase1-map.md](./frontend-phase1-map.md) (qué se conecta en fase 1)
 > y el README (arquitectura). Los hallazgos de backend están **verificados
@@ -102,17 +105,20 @@ workaround · 🟢 mejora / fase 2.
 - **Despliegue**: API primero. Con el API viejo el dashboard funciona en modo
   degradado; al desplegar el API la paginación aparece sola.
 
-### 1.5 🟡 Contrato del refresh token y logout (header vs cookie)
+### 1.5 ✅ RESUELTO — Contrato del refresh token y logout (header `x-refresh-token`)
 
-- **Hoy**: `RefreshTokenGuard` extrae el refresh token de una fuente no
-  documentada. El frontend envía **ambas**: `Authorization: Bearer` y cookies
-  `refreshAccessToken`/`refreshToken` ([src/lib/api/auth.ts](../src/lib/api/auth.ts),
-  [src/proxy.ts](../src/proxy.ts)).
-- **Cambio propuesto**: documentar (o unificar a `Authorization: Bearer`) cómo
-  esperan el token `POST /auth/refresh-token` y `POST /auth/logout`.
-- **Al aclararse**: simplificar los headers en `auth.ts` y `proxy.ts`.
-- **Pendiente de prueba**: el flujo de refresh completo no se ha podido
-  ejercitar end-to-end (requiere el API corriendo y un token cerca de expirar).
+- **Estado**: `RefreshTokenGuard` del API lee el refresh token de
+  `headers['x-refresh-token']` (`src/modules/auth/presentation/guards/refresh-token.guard.ts:24-28`)
+  y lo usan `POST /auth/refresh-token` y `POST /auth/logout`.
+- **Frontend**: alineado — envía solo ese header en el refresh proactivo
+  ([src/proxy.ts](../src/proxy.ts) `refreshTokens`) y en `refreshTokenApi`
+  ([src/lib/api/auth.ts](../src/lib/api/auth.ts)); el logout añade además
+  `Authorization: Bearer` porque el API exige ambos tokens. Las cookies
+  `refreshAccessToken`/`refreshToken` que se enviaban "por si acaso" ya no
+  existen.
+- **Pendiente: prueba e2e del refresh** — el flujo completo (token a <60 s de
+  expirar → `proxy.ts` renueva y reescribe la cookie) no se ha ejercitado
+  end-to-end; requiere el API corriendo y un token cerca de expirar.
 
 ### 1.6 🟡 Evitar el N+1 al resolver el modo del switcher
 
@@ -179,7 +185,7 @@ Sin esto, las vistas seguirán ocultas (ver [frontend-phase1-map.md](./frontend-
 
 | # | Pendiente | Detalle |
 |---|---|---|
-| 1 | 🟡 **Probar el flujo completo contra el API real** | Mayormente verificado (2026-07-29, `api.dev.klarimba.app`, build de producción, usuario COMPANY_OWNER de Giunti Psychometrics). **Verificado**: login real (201), sesión sellada y aceptada por el middleware, `/auth/me` con `platformRole`, `/me/organizations`, las 7 vistas de organización renderizando con datos reales sin caer en el boundary de error, el filtro `?status=INVITED`, `not-found` para una org inexistente, y el 401 del layout → `/login?expired=1`. La tabla de Usuarios muestra el `invitationCode` real (`XDU3D2XU`) en la fila INVITED y `null` en la ACTIVE. **Verificado además por el E2E (5/5 verdes)**: invitar → copiar código → revocar invitación y logout (correos a `@example.com`, sin buzón real). **Falta**: reactivar/renombrar/revocar membresía, el refresh del token cerca de expirar, los errores de dominio ("Insufficient Seats") y las vistas de backoffice (el usuario de prueba no es SUPER_ADMIN). |
+| 1 | 🟡 **Probar el flujo completo contra el API real** | Mayormente verificado (2026-07-29, `api.dev.klarimba.app`, build de producción, usuario COMPANY_OWNER de Giunti Psychometrics). **Verificado**: login real (201), sesión sellada y aceptada por el middleware, `/auth/me` con `platformRole`, `/me/organizations`, las 7 vistas de organización renderizando con datos reales sin caer en el boundary de error, el filtro `?status=INVITED`, `not-found` para una org inexistente, y el 401 del layout → `/login?expired=1`. La tabla de Usuarios muestra el `invitationCode` real (`XDU3D2XU`) en la fila INVITED y `null` en la ACTIVE. **Verificado además por el E2E (6/6 verdes: 5 en `users.spec.ts` + 1 en `invitations.spec.ts`)**: invitar → copiar código → revocar invitación y logout (correos a `@example.com`, sin buzón real). **Falta**: reactivar/renombrar/revocar membresía, el refresh del token cerca de expirar, los errores de dominio ("Insufficient Seats") y las vistas de backoffice (el usuario de prueba no es SUPER_ADMIN). |
 | 2 | ✅ ~~Commit inicial~~ | Hecho. El repo tiene historia desde `862cf21`. |
 | 3 | ✅ ~~`error.tsx` y `not-found.tsx` personalizados~~ | Hecho: [error.tsx](../src/app/error.tsx) raíz, [(dashboard)/error.tsx](../src/app/(dashboard)/error.tsx), [global-error.tsx](../src/app/global-error.tsx), [not-found.tsx](../src/app/not-found.tsx) raíz y [(dashboard)/not-found.tsx](../src/app/(dashboard)/not-found.tsx), sobre un [ErrorState](../src/components/layout/error-state.tsx) común. Usan el prop `unstable_retry` (Next ≥16.2), no el `reset` de versiones anteriores. **Nota**: ante un fallo de SSR, Next devuelve su documento `__next_error__` y el boundary monta en cliente al hidratar; por eso `curl` no ve el mensaje aunque el usuario sí. |
 | 4 | ✅ ~~`loading.tsx` / Suspense por ruta~~ | Hecho: [(dashboard)/loading.tsx](../src/app/(dashboard)/loading.tsx) cubre todas las vistas del segmento. Skeleton neutro (cabecera + tarjetas + bloque) porque el mismo fallback sirve a vistas de tarjetas y de tabla. No aplica a la primera carga: el `layout.tsx` del propio segmento resuelve sesión y contextos antes, y Next no muestra fallback para el layout de su segmento. **Efecto secundario medido**: al abrir el stream de inmediato, un `notFound()` dentro de un `page.tsx` ya no puede fijar el status HTTP — `/org/<uuid-inexistente>` responde **200 con `<meta name="robots" content="noindex">`** en vez de 404. La UI que ve el usuario es la correcta; solo cambia el código de respuesta. Irrelevante aquí (consola autenticada, sin superficie SEO); si alguna vez hiciera falta el 404 real, la comprobación tendría que subir al `proxy.ts`. |
@@ -190,7 +196,7 @@ Sin esto, las vistas seguirán ocultas (ver [frontend-phase1-map.md](./frontend-
 
 | # | Pendiente | Detalle |
 |---|---|---|
-| 7 | 🟡 **Tests** | **E2E hecho y ejecutado (5/5 verdes, 2026-07-29)** ([e2e/](../e2e/), `pnpm e2e`): Playwright recorre login → tabla → invitar → copiar el código → revocar, más not-found y logout, contra el API dev real. Escribe datos, así que solo apunta a dev; se salta si faltan `E2E_EMAIL`/`E2E_PASSWORD`. **Falta la parte unit**: `permissions.ts`, `dashboard-context` (resolución de modos), `http.ts` (envelope + errores 422/dominio) y `format.ts`. No hay runner de unit todavía — decidir entre Vitest y Jest (el API usa Jest). |
+| 7 | 🟡 **Tests** | **E2E hecho y ejecutado (6 tests: 5 en `users.spec.ts` + 1 en `invitations.spec.ts`)** ([e2e/](../e2e/), `pnpm e2e`): Playwright recorre login → tabla → invitar → copiar el código → revocar, filtro de invitados, not-found y logout, y generar códigos al portador → verlos en Invitaciones → revocar uno, contra el API dev real. Escribe datos, así que solo apunta a dev; se salta si faltan `E2E_EMAIL`/`E2E_PASSWORD`. **Falta la parte unit**: `permissions.ts`, `dashboard-context` (resolución de modos), `http.ts` (envelope + errores 422/dominio) y `format.ts`. No hay runner de unit todavía — decidir entre Vitest y Jest (el API usa Jest). |
 | 8 | ✅ ~~Paginación de tablas~~ | Hecho con el 1.4: Usuarios, Clientes y Partners paginan en servidor (`?page=`, 20 por página) y el overview del backoffice calcula sus KPIs con totales del API. `TruncationNotice` desapareció: su aviso vive ahora como modo degradado de [TablePagination](../src/components/dashboard/table-pagination.tsx) para cuando el API no envía `pagination`. Los paneles del detalle de cliente (grants `limit=50`, auditoría `limit=30`) siguen sin paginar — el API ya envía su total, es solo UI pendiente. |
 | 9 | **Búsqueda en Usuarios y Clientes** | El mockup no la dibuja pero con >20 filas es necesaria. Client-side sobre lo cargado como primer paso; server-side cuando el API lo soporte. |
 | 10 | **Estados optimistas** | Las acciones (revocar, reactivar, asignar) esperan el roundtrip completo. Valorar `useOptimistic` en la tabla de usuarios. |
@@ -224,9 +230,9 @@ Sin esto, las vistas seguirán ocultas (ver [frontend-phase1-map.md](./frontend-
 
 ## 3. Orden sugerido de ataque
 
-1. ~~**Backend 1.1 + 1.2 + 1.2b + 1.2c**~~ ✅ hechos en el API y frontend ya
+1. ~~**Backend 1.1 + 1.2 + 1.2b + 1.2c + 1.5**~~ ✅ hechos en el API y frontend ya
    limpio (sin sondeo de `isSuperAdmin()`, sin fallback 404 del rename, sin
-   cruce de `/users` con `/invitations`).
+   cruce de `/users` con `/invitations`, refresh solo por `x-refresh-token`).
 2. ~~**Frontend 2.1 #2–#6**~~ ✅ error/loading boundaries, 401 en actions,
    cookie medida con tokens reales y commits. Del **#1** quedan el refresh del
    token, los errores de dominio y las vistas de backoffice (hace falta un

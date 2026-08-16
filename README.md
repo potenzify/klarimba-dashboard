@@ -1,9 +1,12 @@
 # Klarimba Dashboard
 
+Última actualización: 2026-08-16
+
 Consola de administración B2B de Klarimba (fase 1): empresas, partners ARL y
 backoffice de plataforma. Frontend del mockup [docs/dashboard.html](docs/dashboard.html)
-recortado a lo que el API respalda hoy, según
-[docs/frontend-phase1-map.md](docs/frontend-phase1-map.md).
+(mockup estático de diseño: referencia visual, no documentación) recortado a lo
+que el API respalda hoy, según [docs/frontend-phase1-map.md](docs/frontend-phase1-map.md).
+Guía para agentes y convenciones de código: [AGENTS.md](AGENTS.md).
 
 ## Stack
 
@@ -45,8 +48,12 @@ pnpm exec playwright install chromium
 ```
 
 `pnpm e2e` levanta un build de producción y recorre el flujo real contra el API
-al que apunte `KLARIMBA_API_URL`: login, tabla de usuarios, invitar → copiar el
-código → revocar, not-found y logout.
+al que apunte `KLARIMBA_API_URL` (6 tests):
+
+- `e2e/users.spec.ts`: login, tabla de usuarios, invitar → copiar el código →
+  revocar, filtro de invitados, not-found y logout.
+- `e2e/invitations.spec.ts`: generar códigos "al portador", verlos en la vista
+  de Invitaciones y revocar uno.
 
 Dos avisos:
 
@@ -63,7 +70,7 @@ MX): el API dispara el correo de invitación y no llega a ningún buzón real.
 
 ```
 src/
-├── proxy.ts                   # Middleware: guard de sesión + refresh proactivo del JWT
+├── proxy.ts                   # Guard de sesión + refresh proactivo del JWT (equivale a middleware en Next 16)
 ├── lib/
 │   ├── session.ts / session.server.ts   # iron-session (cookie klarimba_session)
 │   ├── env.ts                 # Variables de entorno validadas con zod
@@ -73,7 +80,7 @@ src/
 │   │   ├── auth.ts / organizations.ts / backoffice.ts   # Endpoints tipados
 │   ├── permissions.ts         # Réplica de la matriz rol×permiso×scope del API
 │   ├── dashboard-context.ts   # Resolución del "modo" (currentMode() con datos reales)
-│   └── navigation.ts          # Navegación por modo (company/peoplebasic/portfolio/admin)
+│   └── navigation.ts          # DashboardMode = company | peoplebasic | portfolio (orgNav) + ADMIN_NAV aparte
 └── app/
     ├── login/                 # Login (RHF + zod + server action)
     ├── (dashboard)/
@@ -84,17 +91,19 @@ src/
 
 ### Resolución de contexto (switcher)
 
-`getDashboardContexts()` calca `currentMode()` del mockup con datos reales:
+`getDashboardContexts()` (`src/lib/dashboard-context.ts`) calca `currentMode()`
+del mockup con datos reales:
 
 | Modo | Señal |
 |---|---|
 | `portfolio` | La org es `type: PARTNER` |
 | `company` | `TENANT` con add-on `ENTERPRISE` activo (`GET .../entitlements`) |
 | `peoplebasic` | `TENANT` sin Enterprise |
-| Super Admin | Sondeo de `GET /backoffice/organizations` (403 ⇒ no admin) |
+| Super Admin (`/admin`) | `platformRole === "SUPER_ADMIN"` en `GET /auth/me` |
 
-Solo membresías con rol administrativo (`COMPANY_OWNER`/`HR_ADMIN`) generan
-contexto; el perfil **Manager queda oculto en fase 1**.
+Solo membresías `ACTIVE` con rol administrativo (`COMPANY_OWNER`/`HR_ADMIN`)
+generan contexto; el perfil **Manager queda oculto en fase 1**. `/` redirige al
+primer contexto de organización (o a `/admin` si no hay ninguno).
 
 ### Autenticación
 
@@ -120,9 +129,22 @@ equipos/sedes, importación CSV y el perfil Manager.
 
 ### Gaps conocidos del API (verificados en el código del backend)
 
-1. **`platformRole` no viaja** en el JWT ni en `/auth/me` → el Super Admin se
-   detecta sondeando backoffice. Ideal: exponerlo en `AuthMeSerializer`.
-2. **No hay `PATCH /organizations/:orgId` para el Owner** (solo backoffice) →
-   el formulario de Configuración muestra un mensaje claro si devuelve 404.
-3. El **bootstrap del primer admin de una hija** es solo backoffice; la vista
-   de Empresas del partner lo comunica.
+1. El **bootstrap del primer admin de una hija** (`POST .../admins`) es solo
+   backoffice; la vista de Empresas del partner lo comunica.
+2. Resolver el modo del switcher hace una llamada a `.../entitlements` **por
+   cada organización** del usuario (N+1); falta un endpoint agregado.
+
+El detalle y el resto del backlog cross-repo están en
+[docs/pendientes-integracion.md](docs/pendientes-integracion.md).
+
+## Documentación
+
+| Doc | Tema |
+|---|---|
+| [AGENTS.md](AGENTS.md) | Guía para agentes: estructura, auth, data fetching, permisos, tests, gotchas |
+| [docs/frontend-phase1-map.md](docs/frontend-phase1-map.md) | Mapa mockup → API: qué vista tiene backend y qué se oculta en fase 1 |
+| [docs/pendientes-integracion.md](docs/pendientes-integracion.md) | Backlog de integración backend/frontend (fuente de verdad) |
+| [docs/dashboard.html](docs/dashboard.html) | Mockup estático de diseño (referencia visual, no documentación) |
+| `../klarimba-api/docs/b2b-feature.md` · `b2b-guia-operativa.md` | Modelo y operación del dominio B2B (fuente de verdad del API) |
+| `../klarimba-api/AGENTS.md` | Convenciones del API (módulos, guards, serializers) |
+| `../CLAUDE.md` (workspace) | Contexto cross-repo: contratos api ↔ app ↔ dashboard, fuente de verdad de cada doc, decisiones vigentes |
