@@ -9,10 +9,13 @@ import {
   organizationSummarySchema,
   organizationUserSchema,
   seatGrantSchema,
+  type CreateInvitationBatchInput,
   type CreateInvitationInput,
   type CreateOrganizationInput,
   type CreateSeatGrantInput,
   type Invitation,
+  type InvitationStatus,
+  type InvitationType,
   type Membership,
   type Organization,
   type OrganizationEntitlement,
@@ -129,6 +132,46 @@ export async function createInvitation(
     body: input,
     schema: invitationSchema,
   });
+}
+
+/**
+ * Genera N códigos PERSONAL sin destinatario ("al portador"): un solo uso cada
+ * uno, canjeable por cualquiera. Para repartir por canales propios (sorteos,
+ * empleados sin correo conocido). No se envía ningún email.
+ */
+export async function createInvitationBatch(
+  orgId: string,
+  input: CreateInvitationBatchInput,
+): Promise<Invitation[]> {
+  return apiFetch(`/organizations/${orgId}/invitations/batch`, {
+    method: "POST",
+    body: input,
+    schema: z.array(invitationSchema),
+  });
+}
+
+/**
+ * Todas las invitaciones de la organización (personales con o sin destinatario
+ * y compartidas). `status=ACTIVE` excluye las vencidas por fecha y
+ * `status=EXPIRED` las incluye — el API no tiene job que marque EXPIRED.
+ */
+export async function listInvitations(
+  orgId: string,
+  params: { status?: InvitationStatus; type?: InvitationType } & PageQuery = {},
+): Promise<Page<Invitation>> {
+  return apiFetchPage(`/organizations/${orgId}/invitations`, {
+    query: params,
+    schema: z.array(invitationSchema),
+  });
+}
+
+/** Total de invitaciones (por estado) vía sonda `limit=1`; `null` sin paginación. */
+export async function countInvitations(
+  orgId: string,
+  status?: InvitationStatus,
+): Promise<number | null> {
+  const { pagination } = await listInvitations(orgId, { status, limit: 1 });
+  return pagination?.total ?? null;
 }
 
 export async function resendInvitation(

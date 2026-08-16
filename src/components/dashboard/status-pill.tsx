@@ -86,3 +86,26 @@ export function seatGrantStatusPill(status: string): {
       return { tone: "grey", label: status };
   }
 }
+
+/**
+ * Tonos por estado de invitación. `EXPIRED` puede venir del API o inferirse
+ * por `expiresAt` vencido (no hay job que lo marque): la vista pasa el estado
+ * ya resuelto.
+ */
+export function invitationStatusPill(status: string): {
+  tone: PillTone;
+  label: string;
+} {
+  switch (status) {
+    case "ACTIVE":
+      return { tone: "green", label: "Activa" };
+    case "EXHAUSTED":
+      return { tone: "purple", label: "Canjeada" };
+    case "EXPIRED":
+      return { tone: "grey", label: "Expirada" };
+    case "REVOKED":
+      return { tone: "red", label: "Revocada" };
+    default:
+      return { tone: "grey", label: status };
+  }
+}

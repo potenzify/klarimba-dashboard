@@ -45,6 +45,7 @@ import type {
   OrganizationUser,
   OrganizationUserStatus,
 } from "@/lib/api/schemas";
+import { copyToClipboard } from "@/lib/clipboard";
 import { formatApiDate, fullName } from "@/lib/format";
 import { roleLabel } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
@@ -75,16 +76,6 @@ interface UsersTableProps {
   users: OrganizationUser[];
   counts: UserStatusCounts;
   activeFilter?: OrganizationUserStatus;
-}
-
-/** Copia al portapapeles; `false` si el navegador lo bloquea (contexto inseguro). */
-async function copyToClipboard(text: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 export function UsersTable({

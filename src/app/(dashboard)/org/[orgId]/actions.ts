@@ -7,6 +7,7 @@ import { ApiError } from "@/lib/api/http";
 import {
   createChild,
   createInvitation,
+  createInvitationBatch,
   createSeatGrant,
   resendInvitation,
   revokeInvitation,
@@ -15,9 +16,11 @@ import {
   updateOrganization,
 } from "@/lib/api/organizations";
 import {
+  createInvitationBatchInputSchema,
   createOrganizationInputSchema,
   createSeatGrantInputSchema,
   organizationRoleSchema,
+  type Invitation,
 } from "@/lib/api/schemas";
 import {
   isSessionExpired,
@@ -82,6 +85,7 @@ export async function inviteByEmailAction(
   }
 
   revalidatePath(`/org/${orgId}/users`);
+  revalidatePath(`/org/${orgId}/invitations`);
   return {
     ok: true,
     data: {
@@ -93,6 +97,32 @@ export async function inviteByEmailAction(
   };
 }
 
+const generateCodesInputSchema = createInvitationBatchInputSchema.extend({
+  orgId: orgIdSchema,
+});
+
+/**
+ * Genera un lote de códigos "al portador" (PERSONAL sin destinatario). El API
+ * no envía correos: la UI muestra los códigos para copiarlos/descargarlos y
+ * quedan visibles en la vista de Invitaciones.
+ */
+export async function generateInvitationCodesAction(
+  input: z.infer<typeof generateCodesInputSchema>,
+): Promise<ActionResult<Invitation[]>> {
+  const parsed = generateCodesInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
+  }
+  const { orgId, ...body } = parsed.data;
+  try {
+    const invitations = await createInvitationBatch(orgId, body);
+    revalidatePath(`/org/${orgId}/invitations`);
+    return { ok: true, data: invitations };
+  } catch (error) {
+    return toActionError(error);
+  }
+}
+
 export async function resendInvitationAction(
   orgId: string,
   invitationId: string,
@@ -100,6 +130,7 @@ export async function resendInvitationAction(
   try {
     await resendInvitation(orgId, invitationId);
     revalidatePath(`/org/${orgId}/users`);
+    revalidatePath(`/org/${orgId}/invitations`);
     return { ok: true };
   } catch (error) {
     return toActionError(error);
@@ -112,7 +143,10 @@ export async function revokeInvitationAction(
 ): Promise<ActionResult> {
   try {
     await revokeInvitation(orgId, invitationId);
+    // Una invitación con destinatario aparece en Usuarios (INVITED) y todas en
+    // Invitaciones: refrescar ambas vistas.
     revalidatePath(`/org/${orgId}/users`);
+    revalidatePath(`/org/${orgId}/invitations`);
     return { ok: true };
   } catch (error) {
     return toActionError(error);

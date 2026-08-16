@@ -204,9 +204,9 @@ Sin esto, las vistas seguirán ocultas (ver [frontend-phase1-map.md](./frontend-
 
 | # | Pendiente | Endpoint disponible |
 |---|---|---|
-| 16 | **Códigos de invitación batch** | `POST .../invitations/batch` (1–100 códigos personales). Es la alternativa real a la carga CSV del mockup. UI sugerida: pestaña "Generar códigos" en el diálogo de invitación + listado con copiar/descargar CSV de códigos. |
-| 17 | **Invitaciones SHARED_CODE** | `POST .../invitations` con `type: SHARED_CODE` + `maxRedemptions`. Útil para onboarding masivo sin correos. |
-| 18 | **Listado/gestión de invitaciones** | `GET .../invitations` (todas, no solo las PERSONAL visibles en Usuarios): ver expiración, canjes restantes, revocar códigos compartidos. |
+| ~~16~~ | ~~**Códigos de invitación batch**~~ ✅ (2026-08-15) | Pestaña "Generar códigos" en el diálogo de invitar (`POST .../invitations/batch`, 1–100 códigos "al portador") con copiar todos / descargar CSV. |
+| 17 | **Invitaciones SHARED_CODE** | `POST .../invitations` con `type: SHARED_CODE` + `maxRedemptions`. Útil para onboarding masivo sin correos. La vista de Invitaciones ya los listaría ("Compartida", canjes `x / y`); falta solo el formulario de creación. |
+| ~~18~~ | ~~**Listado/gestión de invitaciones**~~ ✅ (2026-08-15) | Vista `/org/:id/invitations` sobre `GET .../invitations?status=` (filtro añadido en el API; `EXPIRED` incluye las ACTIVE vencidas por fecha, que la UI también pinta como expiradas porque no hay job que las marque): tipo, canjes, caducidad, copiar, reenviar (solo con email), revocar. |
 | 19 | **Grants del lado backoffice: editar** | `PATCH /backoffice/.../seat-grants/:grantId` (ampliar accesos, suspender, cambiar vigencia). Hoy la UI solo crea y revoca. |
 | 20 | **Preview pública de invitación** | `GET /invitations/:code/preview` — página pública `/invite/[code]` para que el invitado vea la organización antes de registrarse (el registro vive en la app People, definir el handoff). |
 | 21 | **Filtros de estado en Clientes (SA)** | El API acepta `?status=`; la UI solo filtra por tipo. |
@@ -235,6 +235,7 @@ Sin esto, las vistas seguirán ocultas (ver [frontend-phase1-map.md](./frontend-
    (2026-07-29; falta desplegar el API). Queda el **9** (búsqueda) — ahora que
    las tablas paginan, buscar del lado del servidor es el siguiente paso
    natural (el API aún no tiene `?search=`).
-4. **Backend 1.3 + frontend 16–18** (bootstrap por partner y códigos batch) —
-   completa los flujos operativos de ARL y de invitación masiva.
+4. **Backend 1.3 + frontend 17** (bootstrap por partner y códigos compartidos) —
+   completa los flujos operativos de ARL y de invitación masiva. ~~16 y 18~~
+   (códigos batch y vista de Invitaciones) ya están hechos.
 5. Resto de 🟢 según prioridad de producto.

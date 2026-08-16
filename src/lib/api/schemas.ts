@@ -148,6 +148,9 @@ export const seatGrantSchema = baseEntity.extend({
 });
 export type SeatGrant = z.infer<typeof seatGrantSchema>;
 
+export type InvitationStatus = z.infer<typeof invitationStatusSchema>;
+export type InvitationType = z.infer<typeof invitationTypeSchema>;
+
 export const invitationSchema = baseEntity.extend({
   type: invitationTypeSchema,
   code: z.string(),
@@ -318,6 +321,20 @@ export const createInvitationInputSchema = z.object({
   roleToGrant: organizationRoleSchema.optional(),
 });
 export type CreateInvitationInput = z.infer<typeof createInvitationInputSchema>;
+
+/** `POST .../invitations/batch`: N códigos PERSONAL "al portador" (sin destinatario). */
+export const createInvitationBatchInputSchema = z.object({
+  quantity: z.coerce
+    .number()
+    .int("Debe ser un número entero")
+    .min(1, "Mínimo 1 código")
+    .max(100, "Máximo 100 códigos por lote"),
+  roleToGrant: organizationRoleSchema.optional(),
+  expiresAt: z.string().optional(),
+});
+export type CreateInvitationBatchInput = z.infer<
+  typeof createInvitationBatchInputSchema
+>;
 
 export const bootstrapAdminInputSchema = z.object({
   identifier: z.string().min(3, "Requerido"),

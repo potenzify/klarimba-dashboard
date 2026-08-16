@@ -12,6 +12,7 @@ import {
   Shield,
   ShieldCheck,
   Sparkles,
+  Ticket,
   Users,
 } from "lucide-react";
 import Link from "next/link";
@@ -48,6 +49,7 @@ const NAV_ICONS: Record<NavIcon, ComponentType<{ className?: string }>> = {
   licenses: CreditCard,
   shield: Shield,
   clients: Building2,
+  ticket: Ticket,
 };
 
 interface AppSidebarProps {

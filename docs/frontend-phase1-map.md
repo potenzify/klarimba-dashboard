@@ -23,6 +23,7 @@ El modo del dashboard se resuelve con datos reales, calcando `currentMode()` del
 |---|---|---|
 | Overview | ⚠️ | Mostrar solo el bloque de accesos (`GET /organizations/:orgId` → `seatUsage`). Ocultar KPIs de engagement/bienestar y AI card. |
 | Usuarios | ✅ | `GET .../users?status=` (INVITED/ACTIVE/SUSPENDED/REVOKED). Invitar por email (`POST .../invitations` PERSONAL+EMAIL, envía correo), reenviar (`POST .../invitations/:id/resend`), revocar (`DELETE .../members/:id`), reactivar (`PATCH .../members/:id`). **Ocultar**: columnas Equipo/Sede, "Último acceso", estado "Inactivo", acción "Cambiar de equipo". |
+| Invitaciones | ✅ | Vista nueva (no está en el mockup). `GET .../invitations?status=` con paginación; generar lote de códigos "al portador" (`POST .../invitations/batch`, 1–100, sin destinatario) desde la pestaña "Generar códigos" del diálogo de invitar; copiar/CSV; revocar (`DELETE .../invitations/:id`). Los códigos compartidos (`SHARED_CODE`) se listan si existen pero aún no se crean desde la UI. |
 | Equipos y sedes | ❌ | Sin backend. |
 | Engagement | ❌ | Métricas diferidas. |
 | Bienestar agregado | ❌ | Métricas + fórmula de avance diferidas. |
@@ -38,6 +39,7 @@ El modo del dashboard se resuelve con datos reales, calcando `currentMode()` del
 |---|---|---|
 | Overview | ✅ | Accesos y activación desde el summary. |
 | Usuarios | ✅ | Igual que arriba, mismos recortes. |
+| Invitaciones | ✅ | Igual que arriba. |
 | Equipos básicos | ❌ | |
 | Facturación | ❌ | |
 | Añadir Enterprise (upsell) | ⚠️ | El estado sale de `GET .../entitlements`; no hay checkout → CTA "contactar ventas" (la activación es manual vía backoffice). |
@@ -75,7 +77,7 @@ Solo Overview reducido a cupos/summary (⚠️). Engagement, Bienestar y Reporte
 | Elemento | Estado | Nota |
 |---|---|---|
 | Invitar empleados — por email | ✅ | Sin selects de equipo/sede. |
-| Invitar empleados — pestaña CSV | ❌ | No hay endpoint de importación. Alternativa existente que el mockup no dibuja: batch de códigos personales (`POST .../invitations/batch`, 1–100). |
+| Invitar empleados — pestaña CSV | ❌ | No hay endpoint de importación. En su lugar existe la pestaña "Generar códigos" (batch de códigos "al portador", `POST .../invitations/batch`, 1–100) con copiar todos / descargar CSV. |
 | Crear equipo | ❌ | |
 | Crear empresa cliente (ARL/SA) | ✅ | |
 | Onboarding de primer ingreso | ⚠️ | Adaptar los pasos que tocan equipos/CSV. |

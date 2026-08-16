@@ -1,8 +1,8 @@
-/** Formatea fechas del API (ISO string o unix seconds/millis) en es-CO. */
-export function formatApiDate(
+/** Fecha del API (ISO string o unix seconds/millis) como `Date`; `null` si no parsea. */
+export function parseApiDate(
   value: string | number | null | undefined,
-): string {
-  if (value === null || value === undefined || value === "") return "—";
+): Date | null {
+  if (value === null || value === undefined || value === "") return null;
   let date: Date;
   if (typeof value === "number") {
     // unix seconds vs millis
@@ -10,7 +10,15 @@ export function formatApiDate(
   } else {
     date = new Date(value);
   }
-  if (Number.isNaN(date.getTime())) return "—";
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/** Formatea fechas del API (ISO string o unix seconds/millis) en es-CO. */
+export function formatApiDate(
+  value: string | number | null | undefined,
+): string {
+  const date = parseApiDate(value);
+  if (!date) return "—";
   return new Intl.DateTimeFormat("es-CO", {
     day: "2-digit",
     month: "short",

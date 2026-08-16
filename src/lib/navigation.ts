@@ -25,7 +25,8 @@ export type NavIcon =
   | "building"
   | "licenses"
   | "shield"
-  | "clients";
+  | "clients"
+  | "ticket";
 
 export interface NavItem {
   title: string;
@@ -42,12 +43,14 @@ export function orgNav(orgId: string, mode: DashboardMode): NavItem[] {
       return [
         { title: "Overview", href: base, icon: "overview", exact: true },
         { title: "Usuarios", href: `${base}/users`, icon: "users" },
+        { title: "Invitaciones", href: `${base}/invitations`, icon: "ticket" },
         { title: "Configuración", href: `${base}/settings`, icon: "settings" },
       ];
     case "peoplebasic":
       return [
         { title: "Overview", href: base, icon: "overview", exact: true },
         { title: "Usuarios", href: `${base}/users`, icon: "users" },
+        { title: "Invitaciones", href: `${base}/invitations`, icon: "ticket" },
         {
           title: "Añadir Enterprise",
           href: `${base}/enterprise`,

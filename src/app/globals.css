@@ -1,5 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+/* Variantes `data-open`, `data-active`, `data-horizontal`… que usan los
+   componentes de shadcn (tabs, dialog, dropdown, select, tooltip). */
+@import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
 

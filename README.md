@@ -77,7 +77,7 @@ src/
 └── app/
     ├── login/                 # Login (RHF + zod + server action)
     ├── (dashboard)/
-    │   ├── org/[orgId]/       # Overview · users · settings · enterprise · companies · licenses
+    │   ├── org/[orgId]/       # Overview · users · invitations · settings · enterprise · companies · licenses
     │   └── admin/             # Backoffice SA: overview · clients (+detalle) · partners
     └── logout-action.ts
 ```
@@ -109,7 +109,9 @@ contexto; el perfil **Manager queda oculto en fase 1**.
 ## Alcance fase 1
 
 Conectado: Usuarios (invitar por email, reenviar, revocar, reactivar, filtro
-por estado), Overview de accesos (seatUsage), eje partner (crear empresas
+por estado), Invitaciones (listado de todos los códigos con filtro por estado,
+generar lotes de códigos "al portador" con copiar/CSV, revocar), Overview de
+accesos (seatUsage), eje partner (crear empresas
 hijas, asignar licencias), backoffice SA (clientes, partners, grants,
 entitlement Enterprise, bootstrap de admin, auditoría por organización) y la
 resolución del switcher. Oculto (sin backend): métricas de
