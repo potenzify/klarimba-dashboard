@@ -1,6 +1,6 @@
 # Pendientes de integración — Backend y Frontend
 
-> Última actualización: 2026-08-16 · Fuente de verdad (la copia de klarimba-api
+> Última actualización: 2026-09-23 · Fuente de verdad (la copia de klarimba-api
 > fue eliminada; este archivo es el único que se mantiene).
 >
 > Backlog para que el dashboard quede plenamente integrado y funcionando.
@@ -225,6 +225,19 @@ Sin esto, las vistas seguirán ocultas (ver [frontend-phase1-map.md](./frontend-
   — en fase 1 quedó casi vacío y se decidió no mostrarlo; las hijas se ven
   inline en las vistas del partner.
 - Todo el eje de métricas, programas, Intelligence, reportes y facturación.
+
+### 2.5 🟢 Panel de contenido (`/admin/content`, 2026-09-23)
+
+Implementado de punta a punta (API `content-admin` + esta sección). Queda:
+
+- **E2E**: no hay spec de Playwright del panel. Verificado a mano contra el API
+  local (navegación, edición con retraducción, añadir/borrar step, historial y
+  revertir, todos los tipos de step). Si se añade, ojo: editar una misión en dev
+  la marca como «editada en el panel» y `content:sync` dejará de pisarla.
+- **Videos grandes**: la subida pasa por el route handler (streaming) y el API
+  la recibe en memoria. Si se suben videos de cientos de MB con frecuencia,
+  pasar a URL prefirmada directa a S3 (requiere CORS en el bucket público).
+- **Sin toggle de `enabled`** de misiones (no se pidió en la primera versión).
 
 ---
 

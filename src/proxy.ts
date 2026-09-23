@@ -91,7 +91,10 @@ export default async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Todo excepto estáticos de Next y assets públicos.
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    // Todo excepto estáticos de Next, assets públicos y la subida de archivos del
+    // panel de contenido: con proxy activo Next guarda el body en memoria y lo
+    // trunca a 10 MB (`proxyClientMaxBodySize`), y los videos pesan más. Esa ruta
+    // valida la sesión por su cuenta (app/api/content/upload/route.ts).
+    "/((?!_next/static|_next/image|favicon.ico|api/content/upload|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

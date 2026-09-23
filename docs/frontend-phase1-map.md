@@ -74,6 +74,7 @@ Solo Overview reducido a cupos/summary (⚠️). Engagement, Bienestar y Reporte
 | Producto & Entitlements | ✅ | `POST/DELETE /backoffice/organizations/:orgId/entitlements`. |
 | Billing | ❌ | |
 | Auditoría | ⚠️ | Existe **por organización** (`GET .../audit-log`), no global → mostrarla dentro del detalle de cada cliente. |
+| Contenido (no está en el mockup) | ✅ | Panel de contenido (2026-09-23): mundos → mapas → misiones → steps, edición en sitio con retraducción en/it, historial revertible y export/import JSON. API `/backoffice/content`; doc `../klarimba-api/docs/content-admin-panel.md`. |
 
 ## Modales y flujos
 

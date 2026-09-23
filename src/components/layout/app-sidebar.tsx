@@ -6,6 +6,7 @@ import {
   ChevronsUpDown,
   CreditCard,
   LayoutGrid,
+  Layers,
   Loader2,
   LogOut,
   Settings,
@@ -50,6 +51,7 @@ const NAV_ICONS: Record<NavIcon, ComponentType<{ className?: string }>> = {
   shield: Shield,
   clients: Building2,
   ticket: Ticket,
+  content: Layers,
 };
 
 interface AppSidebarProps {

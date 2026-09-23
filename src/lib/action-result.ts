@@ -3,7 +3,7 @@ import { ApiError } from "@/lib/api/http";
 
 export type ActionResult<T = undefined> =
   | { ok: true; data?: T }
-  | { ok: false; error: string };
+  | { ok: false; error: string; code?: string };
 
 /**
  * Traduce el fallo de una server action a `ActionResult`.
@@ -17,7 +17,7 @@ export type ActionResult<T = undefined> =
 export function toActionError(error: unknown): ActionResult<never> {
   if (error instanceof ApiError) {
     if (error.isUnauthorized) redirect("/login?expired=1");
-    return { ok: false, error: error.message };
+    return { ok: false, error: error.message, code: error.code };
   }
   throw error;
 }

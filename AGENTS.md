@@ -6,7 +6,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # AGENTS.md — Guía para agentes de IA
 
-Última actualización: 2026-08-16
+Última actualización: 2026-09-23
 
 Klarimba Dashboard: backoffice web B2B de Klarimba. Lo usan el **Super Admin** de plataforma (`/admin`: clientes, partners, grants, entitlements) y los **owners / HR admins** de cada organización (`/org/:orgId`: usuarios, invitaciones, empresas hijas, licencias, configuración). Consume el API de `../klarimba-api` (NestJS); repo hermano, las features suelen tocar ambos.
 
@@ -37,10 +37,12 @@ src/
 │   ├── (dashboard)/         # layout con sidebar; error/loading/not-found propios
 │   │   ├── page.tsx         # "/" → redirige al primer contexto
 │   │   ├── org/[orgId]/     # overview · users · invitations · settings · enterprise · companies · licenses
-│   │   └── admin/           # backoffice SA: overview · clients (+[orgId]) · partners
+│   │   └── admin/           # backoffice SA: overview · clients (+[orgId]) · partners · content (panel de contenido)
+│   ├── api/content/upload/  # route handler de subida del panel (fuera del matcher de proxy.ts)
 │   ├── logout-action.ts, error.tsx, global-error.tsx, not-found.tsx, layout.tsx (Toaster)
 ├── components/ ui/ (shadcn) · layout/ (sidebar, page-header, error-state) · dashboard/ (table-pagination, status-pill, seat-usage-card) · brand/
-└── lib/ api/ (http, schemas, auth, organizations, backoffice) · session(.server).ts · env.ts · dashboard-context.ts · navigation.ts · permissions.ts · action-result.ts · format.ts · clipboard.ts
+├── components/content/     # editor del panel de contenido: formularios por tipo de step (step-forms/), historial, import/export
+└── lib/ api/ (http, schemas, content-schemas, auth, organizations, backoffice, content) · content/ (step-types, validate, content-state) · session(.server).ts · env.ts · dashboard-context.ts · navigation.ts · permissions.ts · action-result.ts · format.ts · clipboard.ts
 ```
 
 ## Next 16: lo que difiere de tu memoria
@@ -63,6 +65,16 @@ src/
 - Solo desde el servidor: `apiFetch` / `apiFetchPage` (`lib/api/http.ts`, `server-only`) añaden `Authorization: Bearer` desde la cookie, envían `cache: "no-store"`, desenvuelven `{ data, pagination, metadata }` y validan `data` con el zod `schema` obligatorio. Fallo de zod → `ApiError(500, …, "SchemaMismatch")` con `console.error` de los issues (145-155); red caída → `ApiError(503)`; `pagination` se parsea tolerante (`null` si no llega). Los wrappers tipados viven en `lib/api/{auth,organizations,backoffice}.ts`; los schemas en `lib/api/schemas.ts`.
 - Server actions devuelven `ActionResult<T>` (`{ok:true,data?} | {ok:false,error}`, `lib/action-result.ts`). `toActionError(error)` se llama **solo desde el `catch`**: ante 401 hace `redirect("/login?expired=1")`, y `redirect` lanza `NEXT_REDIRECT`, que un `try` se tragaría (8-16). Otros errores no-`ApiError` se relanzan.
 - Cliente: formularios con react-hook-form + `zodResolver` sobre los input schemas de `schemas.ts`; resultado por toast de sonner (`<Toaster>` en `app/layout.tsx`). `form.watch()` en varios formularios genera warnings del React Compiler en `pnpm lint`: aceptados (no migrar de pasada).
+
+## Panel de contenido (`/admin/content`)
+
+Solo Super Admin. Edita en sitio el contenido sembrado del API (`/backoffice/content`, módulo `content-admin`; doc de reglas en `../klarimba-api/docs/content-admin-panel.md`): mundos y mapas (nombre), misiones (nombre, mood, celebratoria) y steps (formulario por tipo en `components/content/step-forms/`, que sigue los tipos de los seeders del API, o JSON avanzado). Se edita solo español; el API retraduce en/it y, si Google falla (`Translation Failed`), `saveWithTranslation` ofrece reintentar en modo `SKIP`. Toda escritura manda la `version` del GET (409 si otro guardó antes). Historial y revertir en la pestaña Historial y en `/admin/content/history`.
+
+Dos excepciones a las convenciones de abajo, a propósito:
+- **Subida de archivos** (`src/app/api/content/upload/route.ts`): el navegador hace `fetch` a ese route handler (no al API) y este reenvía el multipart **en streaming** al API con el JWT de la sesión. Está fuera del matcher de `proxy.ts` porque con proxy activo Next guarda el body en memoria y lo trunca a 10 MB (`proxyClientMaxBodySize`); por eso valida y renueva la sesión por su cuenta.
+- **Schemas** del panel en `lib/api/content-schemas.ts` (no en `schemas.ts`) porque también los importan componentes cliente para tipar; el contenido de los steps se valida como objeto libre (el contrato por tipo lo valida el API).
+
+Las fechas del panel se pintan con `LocalDateTime` (zona del navegador) para no discrepar con el render del servidor.
 
 ## Tablas y paginación
 
@@ -92,7 +104,7 @@ Paginación de servidor con `PAGE_SIZE = 20` por vista (users, invitations, admi
 
 - UI hardcodeada en español (sin i18n); docs en español; commits Conventional Commits en inglés (`feat(scope): …`), como en el historial.
 - Nada de `fetch` al API desde componentes cliente: los datos entran por Server Components y las mutaciones por server actions.
-- Toda respuesta nueva del API necesita su schema zod en `schemas.ts` y un wrapper en `lib/api/`.
+- Toda respuesta nueva del API necesita su schema zod en `schemas.ts` (o `content-schemas.ts` para el panel de contenido) y un wrapper en `lib/api/`.
 
 ## Gotchas
 

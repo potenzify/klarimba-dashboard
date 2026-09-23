@@ -77,7 +77,9 @@ src/
 │   ├── api/
 │   │   ├── http.ts            # apiFetch: desenvuelve {data}, valida con zod, ApiError
 │   │   ├── schemas.ts         # Schemas zod de entidades y DTOs del API
-│   │   ├── auth.ts / organizations.ts / backoffice.ts   # Endpoints tipados
+│   │   ├── content-schemas.ts # Schemas zod del panel de contenido (/backoffice/content)
+│   │   ├── auth.ts / organizations.ts / backoffice.ts / content.ts   # Endpoints tipados
+│   ├── content/               # Panel de contenido: metadatos por tipo de step, validación previa, edición por ruta
 │   ├── permissions.ts         # Réplica de la matriz rol×permiso×scope del API
 │   ├── dashboard-context.ts   # Resolución del "modo" (currentMode() con datos reales)
 │   └── navigation.ts          # DashboardMode = company | peoplebasic | portfolio (orgNav) + ADMIN_NAV aparte
@@ -85,7 +87,8 @@ src/
     ├── login/                 # Login (RHF + zod + server action)
     ├── (dashboard)/
     │   ├── org/[orgId]/       # Overview · users · invitations · settings · enterprise · companies · licenses
-    │   └── admin/             # Backoffice SA: overview · clients (+detalle) · partners
+    │   └── admin/             # Backoffice SA: overview · clients (+detalle) · partners · content (panel de contenido)
+    ├── api/content/upload/    # Route handler: subida de imágenes/videos del panel en streaming (fuera de proxy.ts)
     └── logout-action.ts
 ```
 
@@ -122,7 +125,9 @@ por estado), Invitaciones (listado de todos los códigos con filtro por estado,
 generar lotes de códigos "al portador" con copiar/CSV, revocar), Overview de
 accesos (seatUsage), eje partner (crear empresas
 hijas, asignar licencias), backoffice SA (clientes, partners, grants,
-entitlement Enterprise, bootstrap de admin, auditoría por organización) y la
+entitlement Enterprise, bootstrap de admin, auditoría por organización), el
+**panel de contenido** (`/admin/content`: editar mundos, mapas, misiones y steps
+sin tocar seeds, con historial revertible y export/import JSON) y la
 resolución del switcher. Oculto (sin backend): métricas de
 engagement/bienestar, programas, Intelligence, reportes, facturación,
 equipos/sedes, importación CSV y el perfil Manager.
@@ -147,4 +152,5 @@ El detalle y el resto del backlog cross-repo están en
 | [docs/dashboard.html](docs/dashboard.html) | Mockup estático de diseño (referencia visual, no documentación) |
 | `../klarimba-api/docs/b2b-feature.md` · `b2b-guia-operativa.md` | Modelo y operación del dominio B2B (fuente de verdad del API) |
 | `../klarimba-api/AGENTS.md` | Convenciones del API (módulos, guards, serializers) |
+| `../klarimba-api/docs/content-admin-panel.md` | Panel de contenido: reglas de edición, retraducción, historial, export/import y convivencia con los seeds |
 | `../CLAUDE.md` (workspace) | Contexto cross-repo: contratos api ↔ app ↔ dashboard, fuente de verdad de cada doc, decisiones vigentes |

@@ -26,7 +26,8 @@ export type NavIcon =
   | "licenses"
   | "shield"
   | "clients"
-  | "ticket";
+  | "ticket"
+  | "content";
 
 export interface NavItem {
   title: string;
@@ -75,6 +76,7 @@ export const ADMIN_NAV: NavItem[] = [
   { title: "Overview", href: "/admin", icon: "overview", exact: true },
   { title: "Clientes", href: "/admin/clients", icon: "clients" },
   { title: "Partners", href: "/admin/partners", icon: "shield" },
+  { title: "Contenido", href: "/admin/content", icon: "content" },
 ];
 
 export function modeKicker(mode: DashboardMode): string {
