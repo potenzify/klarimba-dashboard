@@ -216,6 +216,7 @@ Sin esto, las vistas seguirán ocultas (ver [frontend-phase1-map.md](./frontend-
 | 19 | **Grants del lado backoffice: editar** | `PATCH /backoffice/.../seat-grants/:grantId` (ampliar accesos, suspender, cambiar vigencia). Hoy la UI solo crea y revoca. |
 | 20 | **Preview pública de invitación** | `GET /invitations/:code/preview` — página pública `/invite/[code]` para que el invitado vea la organización antes de registrarse (el registro vive en la app People, definir el handoff). |
 | 21 | **Filtros de estado en Clientes (SA)** | El API acepta `?status=`; la UI solo filtra por tipo. |
+| 22 | **Motivo en el audit log** | Desde el 2026-10-03 la app permite borrar la cuenta (`DELETE /auth/me`). En el audit log llega como `MEMBERSHIP_REVOKED` con `metadata.reason = "ACCOUNT_DELETED"` y `actorUserId`/`subjectUserId` en `null` (el usuario ya no existe); la UI lo pinta como "Membresía revocada", igual que una revocación hecha por un admin. Sin cambio de contrato: `metadata` ya pasa por zod como `record`. Falta solo distinguirlo en la etiqueta ("Cuenta eliminada por el usuario"). El miembro desaparece de los listados y su cupo queda libre sin intervención. |
 
 ### 2.4 🟢 Diferido de producto (requiere backend de §1.11)
 
