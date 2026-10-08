@@ -90,13 +90,23 @@ export function InviteDialog({
           Invitar empleados
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md">
+      {/* `sm:` para pisar el `sm:max-w-sm` del DialogContent base: con
+          `max-w-md` a secas el diálogo seguía en 384 px y las tres pestañas no
+          cabían. */}
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Invitar empleados</DialogTitle>
           <DialogDescription>{TAB_DESCRIPTIONS[tab]}</DialogDescription>
         </DialogHeader>
-        <Tabs value={tab} onValueChange={(value) => setTab(value as InviteTab)}>
-          <TabsList className="w-full">
+        {/* `min-w-0`: si las pestañas no caben, no empujan el contenido ni se
+            comen el margen derecho del diálogo. En pantallas estrechas se
+            ocultan los iconos para que quepan las tres etiquetas. */}
+        <Tabs
+          value={tab}
+          onValueChange={(value) => setTab(value as InviteTab)}
+          className="min-w-0"
+        >
+          <TabsList className="w-full max-sm:[&_svg]:hidden">
             <TabsTrigger value="email">
               <Mail />
               Por correo
