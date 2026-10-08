@@ -336,6 +336,27 @@ export type CreateInvitationBatchInput = z.infer<
   typeof createInvitationBatchInputSchema
 >;
 
+/**
+ * Código compartido (`SHARED_CODE`): un mismo código para varias personas,
+ * hasta `maxRedemptions` canjes. Siempre da rol MEMBER: un código que circula
+ * entre varias personas no debe repartir permisos de administración.
+ */
+export const createSharedCodeInputSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(/^[A-Z0-9_-]{4,32}$/, "4–32 caracteres: letras, números, - y _")
+    .optional(),
+  maxRedemptions: z.coerce
+    .number({ error: "Indica cuántos canjes" })
+    .int("Debe ser un número entero")
+    .min(1, "Mínimo 1 canje")
+    .max(10000, "Máximo 10.000 canjes"),
+  expiresAt: z.string().optional(),
+});
+export type CreateSharedCodeInput = z.infer<typeof createSharedCodeInputSchema>;
+
 export const bootstrapAdminInputSchema = z.object({
   identifier: z.string().min(3, "Requerido"),
   identifierType: identifierTypeSchema,

@@ -1,6 +1,6 @@
 # Pendientes de integración — Backend y Frontend
 
-> Última actualización: 2026-09-23 · Fuente de verdad (la copia de klarimba-api
+> Última actualización: 2026-10-08 · Fuente de verdad (la copia de klarimba-api
 > fue eliminada; este archivo es el único que se mantiene).
 >
 > Backlog para que el dashboard quede plenamente integrado y funcionando.
@@ -211,7 +211,7 @@ Sin esto, las vistas seguirán ocultas (ver [frontend-phase1-map.md](./frontend-
 | # | Pendiente | Endpoint disponible |
 |---|---|---|
 | ~~16~~ | ~~**Códigos de invitación batch**~~ ✅ (2026-08-15) | Pestaña "Generar códigos" en el diálogo de invitar (`POST .../invitations/batch`, 1–100 códigos "al portador") con copiar todos / descargar CSV. |
-| 17 | **Invitaciones SHARED_CODE** | `POST .../invitations` con `type: SHARED_CODE` + `maxRedemptions`. Útil para onboarding masivo sin correos. La vista de Invitaciones ya los listaría ("Compartida", canjes `x / y`); falta solo el formulario de creación. |
+| ~~17~~ | ~~**Invitaciones SHARED_CODE**~~ ✅ (2026-10-08) | Pestaña "Compartido" en el diálogo de invitar (`users/shared-code-form.tsx`, acción `createSharedCodeAction`): código opcional con nombre (si va vacío lo genera el API), número de canjes y caducidad. Siempre da rol MEMBER, a propósito: un código que circula entre varias personas no debe repartir permisos de administración. Traduce `Invitation Code Taken` y `No Active Seat Grant`. Muestra el código para copiarlo; en la tabla aparece como "Compartida, `x / y`". |
 | ~~18~~ | ~~**Listado/gestión de invitaciones**~~ ✅ (2026-08-15) | Vista `/org/:id/invitations` sobre `GET .../invitations?status=` (filtro añadido en el API; `EXPIRED` incluye las ACTIVE vencidas por fecha, que la UI también pinta como expiradas porque no hay job que las marque): tipo, canjes, caducidad, copiar, reenviar (solo con email), revocar. |
 | 19 | **Grants del lado backoffice: editar** | `PATCH /backoffice/.../seat-grants/:grantId` (ampliar accesos, suspender, cambiar vigencia). Hoy la UI solo crea y revoca. |
 | 20 | **Preview pública de invitación** | `GET /invitations/:code/preview` — página pública `/invite/[code]` para que el invitado vea la organización antes de registrarse (el registro vive en la app People, definir el handoff). |

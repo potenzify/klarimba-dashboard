@@ -6,7 +6,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # AGENTS.md — Guía para agentes de IA
 
-Última actualización: 2026-09-23
+Última actualización: 2026-10-08
 
 Klarimba Dashboard: backoffice web B2B de Klarimba. Lo usan el **Super Admin** de plataforma (`/admin`: clientes, partners, grants, entitlements) y los **owners / HR admins** de cada organización (`/org/:orgId`: usuarios, invitaciones, empresas hijas, licencias, configuración). Consume el API de `../klarimba-api` (NestJS); repo hermano, las features suelen tocar ambos.
 
@@ -98,7 +98,7 @@ Paginación de servidor con `PAGE_SIZE = 20` por vista (users, invitations, admi
 ## Tests
 
 - No hay runner de unit tests (pendiente decidir Vitest/Jest, ver `docs/pendientes-integracion.md` §2.2).
-- E2E Playwright (`e2e/`, `playwright.config.ts`): 6 tests (5 en `users.spec.ts`, 1 en `invitations.spec.ts`), chromium, `workers: 1`. `webServer` ejecuta `pnpm build && pnpm start` en `:3000`. Corre contra un API **real** (dev) y **escribe** (crea/revoca invitaciones y códigos; correos a `@example.com`): nunca apuntar a producción. Sin `E2E_EMAIL`/`E2E_PASSWORD` la suite se salta con `test.skip`.
+- E2E Playwright (`e2e/`, `playwright.config.ts`): 7 tests (5 en `users.spec.ts`, 2 en `invitations.spec.ts`), chromium, `workers: 1`. `webServer` ejecuta `pnpm build && pnpm start` en `:3000`. Corre contra un API **real** (dev) y **escribe** (crea/revoca invitaciones y códigos; correos a `@example.com`): nunca apuntar a producción. Sin `E2E_EMAIL`/`E2E_PASSWORD` la suite se salta con `test.skip`.
 
 ## Convenciones
 

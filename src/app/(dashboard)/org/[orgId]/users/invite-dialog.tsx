@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Mail, Plus, Ticket, Trash2, UserPlus } from "lucide-react";
+import { Loader2, Mail, Plus, Ticket, Trash2, UserPlus, Users } from "lucide-react";
 import { useState, useTransition } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -28,6 +28,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { inviteByEmailAction } from "../actions";
 import { GenerateCodesForm } from "./generate-codes-form";
+import { SharedCodeForm } from "./shared-code-form";
 
 const inviteFormSchema = z.object({
   invites: z
@@ -43,13 +44,22 @@ const inviteFormSchema = z.object({
 
 type InviteFormValues = z.infer<typeof inviteFormSchema>;
 
-export type InviteTab = "email" | "codes";
+export type InviteTab = "email" | "codes" | "shared";
+
+const TAB_DESCRIPTIONS: Record<InviteTab, string> = {
+  email:
+    "Cada persona recibe por correo un código personal, atado a esa dirección: solo ella puede canjearlo y la app le pre-llena el correo al registrarse. También puedes copiar el código desde la tabla y compartirlo a mano.",
+  codes:
+    "Códigos de un solo uso sin destinatario: los canjea quien los tenga, con el correo que elija. Tú los repartes por tus canales; no se envía ningún email.",
+  shared:
+    "Un único código que pueden canjear varias personas hasta agotar los canjes. Tú lo compartes; no se envía ningún email.",
+};
 
 /**
  * Invitar empleados: por email (invitación PERSONAL + EMAIL, el API envía el
- * correo) o generando un lote de códigos "al portador" (PERSONAL sin
- * destinatario, se reparten a mano). Sin pestaña CSV ni selects de
- * equipo/sede (sin backend).
+ * correo), generando un lote de códigos "al portador" (PERSONAL sin
+ * destinatario, se reparten a mano) o con un código compartido (SHARED_CODE,
+ * varios canjes). Sin pestaña CSV ni selects de equipo/sede (sin backend).
  */
 export function InviteDialog({
   orgId,
@@ -83,11 +93,7 @@ export function InviteDialog({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Invitar empleados</DialogTitle>
-          <DialogDescription>
-            {tab === "email"
-              ? "Cada persona recibe por correo un código personal, atado a esa dirección: solo ella puede canjearlo y la app le pre-llena el correo al registrarse. También puedes copiar el código desde la tabla y compartirlo a mano."
-              : "Códigos de un solo uso sin destinatario: los canjea quien los tenga, con el correo que elija. Tú los repartes por tus canales; no se envía ningún email."}
-          </DialogDescription>
+          <DialogDescription>{TAB_DESCRIPTIONS[tab]}</DialogDescription>
         </DialogHeader>
         <Tabs value={tab} onValueChange={(value) => setTab(value as InviteTab)}>
           <TabsList className="w-full">
@@ -98,6 +104,10 @@ export function InviteDialog({
             <TabsTrigger value="codes">
               <Ticket />
               Generar códigos
+            </TabsTrigger>
+            <TabsTrigger value="shared">
+              <Users />
+              Compartido
             </TabsTrigger>
           </TabsList>
           <TabsContent value="email" className="pt-2">
@@ -111,6 +121,14 @@ export function InviteDialog({
           <TabsContent value="codes" className="pt-2">
             <GenerateCodesForm
               key={`codes-${session}`}
+              orgId={orgId}
+              onCancel={() => setOpen(false)}
+              onDone={() => setOpen(false)}
+            />
+          </TabsContent>
+          <TabsContent value="shared" className="pt-2">
+            <SharedCodeForm
+              key={`shared-${session}`}
               orgId={orgId}
               onCancel={() => setOpen(false)}
               onDone={() => setOpen(false)}

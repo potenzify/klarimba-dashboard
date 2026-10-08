@@ -18,6 +18,7 @@ import {
 import {
   createInvitationBatchInputSchema,
   createOrganizationInputSchema,
+  createSharedCodeInputSchema,
   createSeatGrantInputSchema,
   organizationRoleSchema,
   type Invitation,
@@ -120,6 +121,49 @@ export async function generateInvitationCodesAction(
     return { ok: true, data: invitations };
   } catch (error) {
     return toActionError(error);
+  }
+}
+
+const sharedCodeInputSchema = createSharedCodeInputSchema.extend({
+  orgId: orgIdSchema,
+});
+
+/** Mensajes en español para los conflictos que el formulario sabe explicar. */
+const SHARED_CODE_ERRORS: Record<string, string> = {
+  "Invitation Code Taken": "Ese código ya existe. Elige otro o deja el campo vacío.",
+  "No Active Seat Grant":
+    "La organización no tiene un grant de accesos vigente: no se pueden crear códigos.",
+};
+
+/**
+ * Crea un código compartido (`SHARED_CODE`): lo canjean varias personas hasta
+ * agotar `maxRedemptions`, cada canje consume un acceso. Sin `code`, el API lo
+ * genera.
+ */
+export async function createSharedCodeAction(
+  input: z.input<typeof sharedCodeInputSchema>,
+): Promise<ActionResult<Invitation>> {
+  const parsed = sharedCodeInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
+  }
+  const { orgId, code, maxRedemptions, expiresAt } = parsed.data;
+  try {
+    const invitation = await createInvitation(orgId, {
+      type: "SHARED_CODE",
+      code: code || undefined,
+      maxRedemptions,
+      expiresAt,
+      roleToGrant: "MEMBER",
+    });
+    revalidatePath(`/org/${orgId}/invitations`);
+    return { ok: true, data: invitation };
+  } catch (error) {
+    const result = toActionError(error);
+    if (!result.ok && result.code && SHARED_CODE_ERRORS[result.code]) {
+      return { ...result, error: SHARED_CODE_ERRORS[result.code] };
+    }
+    return result;
   }
 }
 

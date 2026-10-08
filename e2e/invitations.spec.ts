@@ -72,4 +72,58 @@ test.describe("Invitaciones", () => {
       await expect(row.getByText("Revocada")).toBeVisible();
     }
   });
+
+  test("crear un código compartido con nombre y canjes, verlo en la lista y revocarlo", async ({
+    dashboard,
+  }) => {
+    const orgId = orgIdFromUrl(dashboard);
+    await dashboard.goto(`/org/${orgId}/invitations`);
+
+    // Código único por ejecución: los códigos son globales en el API.
+    const code = `E2E-${Date.now().toString(36).toUpperCase()}`;
+
+    await dashboard.getByRole("button", { name: "Invitar empleados" }).click();
+    const dialog = dashboard.getByRole("dialog");
+    await dialog.getByRole("tab", { name: "Compartido" }).click();
+
+    // Se escribe en minúsculas: el formulario lo normaliza a mayúsculas.
+    await dialog.getByLabel("Código (opcional)").fill(code.toLowerCase());
+    await dialog.getByLabel("Número de canjes").fill("3");
+    await dialog.getByRole("button", { name: "Crear código" }).click();
+
+    await expect(dashboard.getByText("Código compartido creado")).toBeVisible();
+    await expect(dialog.getByLabel("Código compartido")).toHaveText(code);
+    await expect(dialog.getByText("3 canjes")).toBeVisible();
+
+    await dialog.getByRole("button", { name: "Copiar código" }).click();
+    expect(
+      await dashboard.evaluate(() => navigator.clipboard.readText()),
+    ).toBe(code);
+
+    await dialog.getByRole("button", { name: "Listo" }).click();
+    await expect(dialog).toBeHidden();
+
+    const row = dashboard.getByRole("row").filter({ hasText: code });
+    await expect(row).toBeVisible();
+    await expect(row.getByText("Compartida")).toBeVisible();
+    await expect(row.getByText("0 / 3")).toBeVisible();
+
+    // El mismo código otra vez: conflicto explicado, sin crear nada.
+    await dashboard.getByRole("button", { name: "Invitar empleados" }).click();
+    await dialog.getByRole("tab", { name: "Compartido" }).click();
+    await dialog.getByLabel("Código (opcional)").fill(code);
+    await dialog.getByRole("button", { name: "Crear código" }).click();
+    await expect(dashboard.getByText("Ese código ya existe.", { exact: false })).toBeVisible();
+    await dialog.getByRole("button", { name: "Cancelar" }).click();
+
+    // --- Revocar (deja el API dev como estaba) ---------------------------
+    await row.getByRole("button", { name: "Acciones" }).click();
+    await dashboard.getByRole("menuitem", { name: "Revocar código" }).click();
+    await dashboard
+      .getByRole("dialog")
+      .getByRole("button", { name: "Revocar código" })
+      .click();
+    await expect(dashboard.getByText("Invitación revocada").first()).toBeVisible();
+    await expect(row.getByText("Revocada")).toBeVisible();
+  });
 });

@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import type { Invitation } from "@/lib/api/schemas";
 import { copyToClipboard } from "@/lib/clipboard";
+import { endOfDayIso, todayInputValue } from "@/lib/date-input";
 import { formatApiDate } from "@/lib/format";
 import { roleLabel } from "@/lib/navigation";
 import { generateInvitationCodesAction } from "../actions";
@@ -36,18 +37,6 @@ const generateCodesFormSchema = z.object({
 });
 
 type GenerateCodesFormValues = z.infer<typeof generateCodesFormSchema>;
-
-/** Fin del día local de la fecha elegida, en ISO, para `expiresAt`. */
-function endOfDayIso(date: string): string {
-  const [year, month, day] = date.split("-").map(Number);
-  return new Date(year, month - 1, day, 23, 59, 59, 999).toISOString();
-}
-
-function todayInputValue(): string {
-  const now = new Date();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-}
 
 interface GenerateCodesFormProps {
   orgId: string;
