@@ -6,7 +6,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # AGENTS.md — Guía para agentes de IA
 
-Última actualización: 2026-10-08
+Última actualización: 2026-10-19
 
 Klarimba Dashboard: backoffice web B2B de Klarimba. Lo usan el **Super Admin** de plataforma (`/admin`: clientes, partners, grants, entitlements) y los **owners / HR admins** de cada organización (`/org/:orgId`: usuarios, invitaciones, empresas hijas, licencias, configuración). Consume el API de `../klarimba-api` (NestJS); repo hermano, las features suelen tocar ambos.
 
@@ -34,13 +34,15 @@ src/
 ├── proxy.ts                 # Guard de sesión + refresh proactivo del JWT (equivale a middleware en Next 16)
 ├── app/
 │   ├── login/               # page + login-form (RHF) + actions.ts (server action)
+│   ├── invite/[code]/       # pública: activar la cuenta de un admin invitado (registro + login) o aceptar con sesión
+│   ├── reset-password/      # pública: código por correo → contraseña nueva
 │   ├── (dashboard)/         # layout con sidebar; error/loading/not-found propios
 │   │   ├── page.tsx         # "/" → redirige al primer contexto
 │   │   ├── org/[orgId]/     # overview · users · invitations · settings · enterprise · companies · licenses
 │   │   └── admin/           # backoffice SA: overview · clients (+[orgId]) · partners · content (panel de contenido)
 │   ├── api/content/upload/  # route handler de subida del panel (fuera del matcher de proxy.ts)
 │   ├── logout-action.ts, error.tsx, global-error.tsx, not-found.tsx, layout.tsx (Toaster)
-├── components/ ui/ (shadcn) · layout/ (sidebar, page-header, error-state) · dashboard/ (table-pagination, status-pill, seat-usage-card) · brand/
+├── components/ ui/ (shadcn) · layout/ (sidebar, page-header, error-state, auth-shell) · dashboard/ (table-pagination, status-pill, seat-usage-card) · brand/
 ├── components/content/     # editor del panel de contenido: formularios por tipo de step (step-forms/), historial, import/export
 └── lib/ api/ (http, schemas, content-schemas, auth, organizations, backoffice, content) · content/ (step-types, validate, content-state) · session(.server).ts · env.ts · dashboard-context.ts · navigation.ts · permissions.ts · action-result.ts · format.ts · clipboard.ts
 ```
@@ -54,11 +56,20 @@ src/
 
 ## Auth y contextos
 
-- Login (`app/login/actions.ts`): `POST /auth/login` → `{accessToken, refreshAccessToken}` sellados en la cookie httpOnly `klarimba_session` (iron-session, TTL 14 días, `session.ts`). Los JWT nunca llegan al navegador. 400 y 401 del API se muestran como "Credenciales incorrectas" (`actions.ts:34`); `?next=` solo se sigue si empieza por `/` y no por `//` (anti open-redirect, `actions.ts:51`).
-- `proxy.ts`: sin sesión → `/login?next=…`; con sesión en `/login` → `/`; si el access token expira en <60 s, renueva contra `POST /auth/refresh-token` con header `x-refresh-token` (`proxy.ts:22-23`, mismo contrato en `lib/api/auth.ts:20-36`) y reescribe la cookie; si el refresh falla → `/login?expired=1` y borra la cookie. El logout envía `Authorization: Bearer` + `x-refresh-token` y destruye la sesión aunque el API falle.
+- Login (`app/login/actions.ts`): `POST /auth/login` → `{accessToken, refreshAccessToken}` sellados en la cookie httpOnly `klarimba_session` (iron-session, TTL 14 días, `session.ts`). Los JWT nunca llegan al navegador. 400 y 401 del API se muestran como "Credenciales incorrectas" (`actions.ts:30`); `?next=` solo se sigue si empieza por `/` y no por `//` (anti open-redirect, `actions.ts:40`). La sesión se abre con `saveSessionTokens` (`session.server.ts`), que comparte con la activación de cuenta. El formulario no limita la contraseña a 20 caracteres (el registro admite 24 y el API no limita el login).
+- `proxy.ts`: sin sesión → `/login?next=…`, salvo las páginas públicas `/invite/:code` y `/reset-password` (`isPublicPath`); con sesión en `/login` → `/`; si el access token expira en <60 s, renueva contra `POST /auth/refresh-token` con header `x-refresh-token` (`proxy.ts:31-32`, mismo contrato en `refreshTokenApi` de `lib/api/auth.ts`) y reescribe la cookie; si el refresh falla → `/login?expired=1` y borra la cookie. El logout envía `Authorization: Bearer` + `x-refresh-token` y destruye la sesión aunque el API falle.
 - `getDashboardContexts()` (`lib/dashboard-context.ts`, envuelto en `React.cache`): `GET /me/organizations` + `GET /auth/me`. `superAdmin = me.platformRole === "SUPER_ADMIN"` (línea 72). Solo membresías `ACTIVE` con rol ≠ `MEMBER` generan contexto (74-79); por cada una consulta `/organizations/:id/entitlements` para decidir el modo (N+1 conocido).
 - Modos (`lib/navigation.ts`): `DashboardMode = "company" | "peoplebasic" | "portfolio"` (PARTNER → portfolio; TENANT con add-on ENTERPRISE activo → company; si no → peoplebasic). El backoffice no es un modo: `ADMIN_NAV` aparte y `admin/layout.tsx:12` hace `notFound()` si no es super admin.
 - `/` redirige al primer contexto de org o a `/admin` (`(dashboard)/page.tsx`). `requireOrgContext(orgId, modes?)` → `notFound()` si la org no es tuya o la vista no aplica al modo. Un 401 al resolver el layout → `/login?expired=1` (`(dashboard)/layout.tsx:22-23`).
+
+## Alta de administradores y contraseña olvidada (páginas públicas)
+
+Un administrador nuevo se activa **en el dashboard, sin la app** (contrato en `../klarimba-api/docs/b2b-feature.md` §6.7):
+
+- El correo de invitación con rol administrativo trae el botón «Activar mi cuenta» → `/invite/<código>` (el API arma el enlace con su variable `DASHBOARD_URL`). La página lee `GET /invitations/:code/preview` y, **sin sesión**, muestra `activate-account-form.tsx`: nombre, apellido, contraseña (reglas del API: 8-24, mayúscula, número y símbolo, `newPasswordSchema`) y términos; fecha de nacimiento y género solo si `grantsAppAccess` (el API los exige entonces). `activateAccountAction` vuelve a leer el preview en el servidor (el correo sale de la invitación, no del formulario), llama a `POST /auth/register` con el código y hace login. **Con sesión**, ofrece `POST /invitations/redeem` o cerrar sesión si la invitación es para otro correo. Miembro, usada, inexistente o atada a teléfono → aviso.
+- Quien ya tenía cuenta recibe del API un aviso con enlace a `/login`; el backoffice (`BootstrapAdminCard`) muestra el enlace de activación tras invitar, por si el correo no llega.
+- `/reset-password`: correo → `POST /auth/forgot-password` (siempre OK, no revela si la cuenta existe) → código de 6 dígitos + contraseña nueva → `POST /auth/reset-password` (403 = código incorrecto o vencido) → `/login?reset=1`.
+- Estos endpoints públicos se llaman con `Accept-Language: es` / `x-client-locale: es` (`SPANISH_HEADERS` en `lib/api/auth.ts`) para que correos y preferencias de la cuenta nueva salgan en español.
 
 ## Data fetching y server actions
 

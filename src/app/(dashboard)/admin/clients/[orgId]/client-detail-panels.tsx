@@ -2,6 +2,8 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
+  Check,
+  Copy,
   Loader2,
   Pencil,
   Plus,
@@ -35,6 +37,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { OrganizationEntitlement } from "@/lib/api/schemas";
+import { copyToClipboard } from "@/lib/clipboard";
 import { formatApiDate } from "@/lib/format";
 import {
   bootstrapAdminAction,
@@ -406,20 +409,27 @@ type BootstrapValues = z.infer<typeof bootstrapFormSchema>;
 
 export function BootstrapAdminCard({ orgId }: { orgId: string }) {
   const [isPending, startTransition] = useTransition();
+  /** Enlace de activación de la última invitación, por si el correo no llega. */
+  const [activationUrl, setActivationUrl] = useState<string | null>(null);
   const form = useForm<BootstrapValues>({
     resolver: zodResolver(bootstrapFormSchema),
     defaultValues: { email: "", role: "COMPANY_OWNER" },
   });
 
   function onSubmit(values: BootstrapValues) {
+    setActivationUrl(null);
     startTransition(async () => {
       const result = await bootstrapAdminAction({ orgId, ...values });
       if (result.ok) {
+        const code = result.data?.invitationCode;
         toast.success(
           result.data?.existed
-            ? "El usuario ya existía: membresía de admin creada"
-            : "Invitación de administrador enviada",
+            ? "Ya tenía cuenta: quedó como administrador y le avisamos por correo"
+            : "Invitación enviada: le llegará un correo para activar su cuenta",
         );
+        if (code) {
+          setActivationUrl(`${window.location.origin}/invite/${encodeURIComponent(code)}`);
+        }
         form.reset();
       } else {
         toast.error(result.error);
@@ -478,11 +488,43 @@ export function BootstrapAdminCard({ orgId }: { orgId: string }) {
             Enviar invitación
           </Button>
           <p className="text-[11px] leading-relaxed text-muted-foreground">
-            Recibe las llaves de la organización: si el usuario ya existe se le
-            asigna el rol; si no, se le envía una invitación por correo.
+            Recibe las llaves de la organización. Si ya tiene cuenta, queda como
+            administrador al momento y le avisamos por correo. Si no, le llega un
+            correo para activar su cuenta y crear su contraseña en este panel.
           </p>
         </form>
+        {activationUrl && <ActivationLink url={activationUrl} />}
       </CardContent>
     </Card>
+  );
+}
+
+/** Enlace de activación para compartirlo a mano si el correo no llega. */
+function ActivationLink({ url }: { url: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    if (!(await copyToClipboard(url))) {
+      toast.error("No se pudo copiar el enlace.");
+      return;
+    }
+    setCopied(true);
+    toast.success("Enlace copiado");
+    setTimeout(() => setCopied(false), 1500);
+  }
+
+  return (
+    <div className="mt-4 flex flex-col gap-2 rounded-lg border bg-muted/40 p-3">
+      <p className="text-[11px] leading-relaxed text-muted-foreground">
+        Si el correo no le llega, compártele este enlace para activar su cuenta:
+      </p>
+      <div className="flex items-center gap-2">
+        <code className="min-w-0 flex-1 truncate font-mono text-[11px]">{url}</code>
+        <Button type="button" size="icon-sm" variant="outline" onClick={copy}>
+          {copied ? <Check /> : <Copy />}
+          <span className="sr-only">Copiar enlace</span>
+        </Button>
+      </div>
+    </div>
   );
 }

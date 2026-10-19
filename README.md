@@ -1,6 +1,6 @@
 # Klarimba Dashboard
 
-Última actualización: 2026-08-16
+Última actualización: 2026-10-19
 
 Consola de administración B2B de Klarimba (fase 1): empresas, partners ARL y
 backoffice de plataforma. Frontend del mockup [docs/dashboard.html](docs/dashboard.html)
@@ -84,7 +84,9 @@ src/
 │   ├── dashboard-context.ts   # Resolución del "modo" (currentMode() con datos reales)
 │   └── navigation.ts          # DashboardMode = company | peoplebasic | portfolio (orgNav) + ADMIN_NAV aparte
 └── app/
-    ├── login/                 # Login (RHF + zod + server action)
+    ├── login/                 # Login (RHF + zod + server action) con «¿Olvidaste tu contraseña?»
+    ├── invite/[code]/         # Pública: un admin invitado activa su cuenta (o la acepta con sesión)
+    ├── reset-password/        # Pública: restablecer la contraseña con un código por correo
     ├── (dashboard)/
     │   ├── org/[orgId]/       # Overview · users · invitations · settings · enterprise · companies · licenses
     │   └── admin/             # Backoffice SA: overview · clients (+detalle) · partners · content (panel de contenido)
@@ -112,10 +114,12 @@ primer contexto de organización (o a `/admin` si no hay ninguno).
 
 1. Login → `POST /auth/login` → `{accessToken, refreshAccessToken}` se guardan
    cifrados en la cookie de sesión (iron-session, httpOnly).
-2. `proxy.ts` corre en cada request: redirige a `/login` sin sesión y, si el
-   access token expira en <60 s, lo renueva contra `/auth/refresh-token` y
-   reescribe la cookie.
-3. Todas las llamadas al API se hacen desde el servidor (`server-only`) con
+2. `proxy.ts` corre en cada request: redirige a `/login` sin sesión (salvo
+   `/invite/:code` y `/reset-password`, que son públicas) y, si el access token
+   expira en <60 s, lo renueva contra `/auth/refresh-token` y reescribe la cookie.
+3. Un administrador nuevo no necesita la app: el correo de invitación lo trae a
+   `/invite/:code`, donde crea su contraseña y entra (ver `AGENTS.md`).
+4. Todas las llamadas al API se hacen desde el servidor (`server-only`) con
    `Authorization: Bearer`.
 
 ## Alcance fase 1

@@ -246,14 +246,34 @@ export const authMeSchema = z
   .passthrough();
 export type AuthMe = z.infer<typeof authMeSchema>;
 
-/** Respuesta cruda de `POST /backoffice/organizations/:orgId/admins`. */
+/**
+ * Respuesta de `POST /backoffice/organizations/:orgId/admins`: `membership` si
+ * la persona ya tenía cuenta, `invitation` (con su código) si no.
+ */
 export const bootstrapAdminResultSchema = z
   .object({
     membership: z.unknown().optional(),
-    invitation: z.unknown().optional(),
+    invitation: z.object({ code: z.string() }).passthrough().optional(),
   })
   .passthrough();
 export type BootstrapAdminResult = z.infer<typeof bootstrapAdminResultSchema>;
+
+/** `GET /invitations/:code/preview` (público): lo que el invitado ve antes de activar su cuenta. */
+export const invitationPreviewSchema = z.object({
+  organizationName: z.string(),
+  type: invitationTypeSchema,
+  isRedeemable: z.boolean(),
+  /** Email/teléfono al que está atado un código PERSONAL; null si es al portador. */
+  identifier: z.string().nullable(),
+  identifierType: identifierTypeSchema.nullable(),
+  /**
+   * `optional` a propósito: los añadió el API después y, sin desplegar, la
+   * página debe degradar (pedir todos los datos), no romper.
+   */
+  roleToGrant: organizationRoleSchema.optional(),
+  grantsAppAccess: z.boolean().optional(),
+});
+export type InvitationPreview = z.infer<typeof invitationPreviewSchema>;
 
 // ---------------------------------------------------------------------------
 // Inputs (request DTOs) — se validan también en el cliente con RHF
@@ -264,12 +284,106 @@ export const loginInputSchema = z.object({
     .string()
     .min(3, "Mínimo 3 caracteres")
     .max(255, "Máximo 255 caracteres"),
+  // Sin el tope de 20 de antes: el registro admite hasta 24 y quien creara una
+  // contraseña más larga no podía entrar. El API no limita el login.
   password: z
     .string()
     .min(6, "Mínimo 6 caracteres")
-    .max(20, "Máximo 20 caracteres"),
+    .max(128, "Máximo 128 caracteres"),
 });
 export type LoginInput = z.infer<typeof loginInputSchema>;
+
+/**
+ * Reglas de contraseña nueva del API (`passwordRegex` + PASSWORD_MIN/MAX_LENGTH
+ * de klarimba-api): 8 a 24 caracteres con una mayúscula, un número y un símbolo.
+ */
+export const newPasswordSchema = z
+  .string()
+  .min(8, "Mínimo 8 caracteres")
+  .max(24, "Máximo 24 caracteres")
+  .regex(
+    /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$/,
+    "Debe tener una mayúscula, un número y un símbolo",
+  );
+
+const passwordsMatch = (value: { password: string; passwordConfirmation: string }) =>
+  value.password === value.passwordConfirmation;
+const passwordsMatchError = {
+  message: "Las contraseñas no coinciden",
+  path: ["passwordConfirmation"],
+};
+
+export const genderSchema = z.enum(["male", "female", "other"]);
+
+/** Años cumplidos a hoy para un `YYYY-MM-DD` de `<input type="date">`. */
+function yearsSince(date: string): number {
+  const [year, month, day] = date.split("-").map(Number);
+  const now = new Date();
+  const hadBirthday =
+    now.getMonth() + 1 > month || (now.getMonth() + 1 === month && now.getDate() >= day);
+  return now.getFullYear() - year - (hadBirthday ? 0 : 1);
+}
+
+const activateAccountBaseSchema = z.object({
+  /** Solo si la invitación no está atada a un correo (si lo está, manda el de la invitación). */
+  email: z.string().trim().optional(),
+  firstName: z.string().trim().min(3, "Mínimo 3 caracteres").max(100),
+  lastName: z.string().trim().min(3, "Mínimo 3 caracteres").max(100),
+  password: newPasswordSchema,
+  passwordConfirmation: z.string(),
+  acceptTerms: z.boolean(),
+  birthDate: z.string().optional(),
+  gender: genderSchema.optional(),
+});
+export type ActivateAccountInput = z.infer<typeof activateAccountBaseSchema>;
+
+/**
+ * Activación de la cuenta de un invitado desde el dashboard (`POST
+ * /auth/register` con el código). Lo que se exige depende de la invitación:
+ * el correo, si no viene atado a uno; fecha de nacimiento (18+) y género, solo
+ * si también da acceso a la app (un admin que solo opera el dashboard no los da).
+ */
+export function activateAccountInputSchema(options: {
+  needsEmail: boolean;
+  needsAppProfile: boolean;
+}) {
+  return activateAccountBaseSchema.superRefine((value, ctx) => {
+    const issue = (path: keyof ActivateAccountInput, message: string) =>
+      ctx.addIssue({ code: "custom", path: [path], message });
+
+    if (!passwordsMatch(value)) {
+      issue("passwordConfirmation", passwordsMatchError.message);
+    }
+    if (!value.acceptTerms) {
+      issue("acceptTerms", "Debes aceptar los términos y la política de privacidad");
+    }
+    if (options.needsEmail && !z.email().safeParse(value.email).success) {
+      issue("email", "Correo inválido");
+    }
+    if (options.needsAppProfile) {
+      if (!value.birthDate) issue("birthDate", "Indica tu fecha de nacimiento");
+      else if (yearsSince(value.birthDate) < 18) {
+        issue("birthDate", "Debes ser mayor de 18 años");
+      }
+      if (!value.gender) issue("gender", "Elige una opción");
+    }
+  });
+}
+
+export const forgotPasswordInputSchema = z.object({
+  email: z.string().trim().email("Correo inválido"),
+});
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordInputSchema>;
+
+export const resetPasswordInputSchema = z
+  .object({
+    email: z.string().trim().email("Correo inválido"),
+    code: z.string().trim().regex(/^\d{6}$/, "El código tiene 6 dígitos"),
+    password: newPasswordSchema,
+    passwordConfirmation: z.string(),
+  })
+  .refine(passwordsMatch, passwordsMatchError);
+export type ResetPasswordInput = z.infer<typeof resetPasswordInputSchema>;
 
 export const orgSlugSchema = z
   .string()

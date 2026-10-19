@@ -1,6 +1,6 @@
 # Frontend Fase 1 — Mapa mockup → API
 
-> Última actualización: 2026-08-16 · Fuente de verdad: este archivo (la copia
+> Última actualización: 2026-10-19 · Fuente de verdad: este archivo (la copia
 > en `klarimba-api/docs/frontend-phase1-map.md` está desactualizada y no se mantiene).
 >
 > Checklist para el traspaso del mockup [dashboard.html](./dashboard.html) (mockup estático de diseño, no documentación) a frontend real: qué vistas tienen respaldo en el API hoy y qué debe **ocultarse** en la fase 1. Contraparte de [b2b-feature.md](../../klarimba-api/docs/b2b-feature.md) (estado del API) y [b2b-enterprise-plan.md §1.2](../../klarimba-api/docs/b2b-enterprise-plan.md) (qué está diferido y por qué), ambos en `klarimba-api`.
@@ -68,7 +68,7 @@ Solo Overview reducido a cupos/summary (⚠️). Engagement, Bienestar y Reporte
 | Vista | Estado | Fase 1 |
 |---|---|---|
 | Overview plataforma | ⚠️ | Conteos con `GET /backoffice/organizations`; sin métricas de plataforma. |
-| Clientes | ✅ | CRUD de orgs, grants, bootstrap de admin (`role` opcional Owner/HR). |
+| Clientes | ✅ | CRUD de orgs, grants, bootstrap de admin (`role` opcional Owner/HR). Tras invitar muestra el enlace de activación (`/invite/:code`), que el admin abre desde el correo para crear su contraseña en el dashboard. |
 | Partners | ✅ | Crear con `type: PARTNER`. |
 | Contratos | ❌ | No hay entidad contrato (los grants viven en Clientes). |
 | Producto & Entitlements | ✅ | `POST/DELETE /backoffice/organizations/:orgId/entitlements`. |

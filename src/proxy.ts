@@ -11,6 +11,15 @@ const API_URL = (
   process.env.KLARIMBA_API_URL ?? "http://localhost:8080/api/v1"
 ).replace(/\/$/, "");
 
+/**
+ * Páginas abiertas sin sesión: activar la cuenta desde el correo de invitación
+ * y restablecer la contraseña. Con sesión también se pueden abrir (aceptar una
+ * invitación estando logueado), y entonces pasan por el refresh de abajo.
+ */
+function isPublicPath(pathname: string): boolean {
+  return pathname.startsWith("/invite/") || pathname === "/reset-password";
+}
+
 /** Renueva el access token si expira en menos de 60 segundos. */
 const REFRESH_WINDOW_MS = 60_000;
 
@@ -49,6 +58,10 @@ export default async function proxy(request: NextRequest) {
     if (isAuthenticated) {
       return NextResponse.redirect(new URL("/", request.url));
     }
+    return response;
+  }
+
+  if (!isAuthenticated && isPublicPath(pathname)) {
     return response;
   }
 

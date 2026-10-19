@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -15,9 +16,11 @@ import { loginAction } from "./actions";
 interface LoginFormProps {
   next?: string;
   sessionExpired?: boolean;
+  /** Viene de restablecer la contraseña (`?reset=1`). */
+  passwordReset?: boolean;
 }
 
-export function LoginForm({ next, sessionExpired }: LoginFormProps) {
+export function LoginForm({ next, sessionExpired, passwordReset }: LoginFormProps) {
   const [serverError, setServerError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -41,6 +44,13 @@ export function LoginForm({ next, sessionExpired }: LoginFormProps) {
           <Alert className="mb-4">
             <AlertDescription>
               Tu sesión expiró. Vuelve a iniciar sesión.
+            </AlertDescription>
+          </Alert>
+        )}
+        {passwordReset && !serverError && (
+          <Alert className="mb-4">
+            <AlertDescription>
+              Contraseña actualizada. Ya puedes iniciar sesión.
             </AlertDescription>
           </Alert>
         )}
@@ -71,7 +81,15 @@ export function LoginForm({ next, sessionExpired }: LoginFormProps) {
             )}
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="password">Contraseña</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="password">Contraseña</Label>
+              <Link
+                href="/reset-password"
+                className="text-xs font-medium text-primary hover:underline"
+              >
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </div>
             <Input
               id="password"
               type="password"

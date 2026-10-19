@@ -132,9 +132,13 @@ const bootstrapSchema = z.object({
   role: z.enum(["COMPANY_OWNER", "HR_ADMIN"]),
 });
 
+/**
+ * `existed`: ya tenía cuenta y quedó como admin (el API le avisa por correo).
+ * Si no, `invitationCode` es el código que activa la cuenta en `/invite/:code`.
+ */
 export async function bootstrapAdminAction(
   input: z.infer<typeof bootstrapSchema>,
-): Promise<ActionResult<{ existed: boolean }>> {
+): Promise<ActionResult<{ existed: boolean; invitationCode?: string }>> {
   const parsed = bootstrapSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
@@ -146,7 +150,13 @@ export async function bootstrapAdminAction(
       role: parsed.data.role,
     });
     revalidatePath(`/admin/clients/${parsed.data.orgId}`);
-    return { ok: true, data: { existed: Boolean(result.membership) } };
+    return {
+      ok: true,
+      data: {
+        existed: Boolean(result.membership),
+        invitationCode: result.invitation?.code,
+      },
+    };
   } catch (error) {
     return toActionError(error);
   }

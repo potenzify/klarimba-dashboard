@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { apiFetch, apiFetchPage, type Page } from "@/lib/api/http";
 import {
+  invitationPreviewSchema,
   invitationSchema,
   membershipSchema,
   organizationEntitlementSchema,
@@ -14,6 +15,7 @@ import {
   type CreateOrganizationInput,
   type CreateSeatGrantInput,
   type Invitation,
+  type InvitationPreview,
   type InvitationStatus,
   type InvitationType,
   type Membership,
@@ -191,6 +193,23 @@ export async function revokeInvitation(
   return apiFetch(`/organizations/${orgId}/invitations/${invitationId}`, {
     method: "DELETE",
     schema: invitationSchema,
+  });
+}
+
+/** Público (sin sesión, throttling 10/min en el API). Código inexistente → 404. */
+export async function previewInvitation(code: string): Promise<InvitationPreview> {
+  return apiFetch(`/invitations/${encodeURIComponent(code)}/preview`, {
+    schema: invitationPreviewSchema,
+    auth: false,
+  });
+}
+
+/** Canjea el código con la sesión actual (el API valida que sea su destinatario). */
+export async function redeemInvitation(code: string): Promise<Membership> {
+  return apiFetch("/invitations/redeem", {
+    method: "POST",
+    body: { code },
+    schema: membershipSchema,
   });
 }
 

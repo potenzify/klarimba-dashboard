@@ -1,6 +1,6 @@
 # Pendientes de integración — Backend y Frontend
 
-> Última actualización: 2026-10-08 · Fuente de verdad (la copia de klarimba-api
+> Última actualización: 2026-10-19 · Fuente de verdad (la copia de klarimba-api
 > fue eliminada; este archivo es el único que se mantiene).
 >
 > Backlog para que el dashboard quede plenamente integrado y funcionando.
@@ -204,6 +204,8 @@ Sin esto, las vistas seguirán ocultas (ver [frontend-phase1-map.md](./frontend-
 | 12 | **i18n** | Todos los textos están hardcodeados en español. Si Klarimba opera en Italia (el mockup mezcla it/es), introducir `next-intl` antes de que crezca el copy. |
 | 13 | **Accesibilidad** | Revisión de foco en diálogos/dropdowns (Radix cubre lo básico), `aria-live` para toasts de resultado, contraste de los pills en dark mode. |
 | 14 | **CI** | Pipeline mínimo: `pnpm lint && pnpm exec tsc --noEmit && pnpm build` (+ tests cuando existan). |
+| 23 | **Throttling de los endpoints públicos** | Login (10/min), registro (5/min), preview (10/min), `forgot-password` (3/min) y `reset-password` (5/min) limitan **por IP**, y el dashboard los llama desde su servidor: todos los usuarios del dashboard comparten ese cupo. Con pocos admins no se nota; si crece, el API tendría que limitar por otra clave (p. ej. el correo) o confiar en un header del dashboard (`trust proxy` hoy es 1). |
+| 24 | **Sesiones tras restablecer la contraseña** | `POST /auth/reset-password` (como `change-password`) no invalida los tokens ya emitidos: una sesión abierta en otro navegador sigue viva hasta que caduque su refresh. Requiere en el API marcar `passwordChangedAt` y rechazar tokens anteriores. |
 | 15 | **Warnings de lint** | 4 warnings del React Compiler por `form.watch()` de react-hook-form (esperados; el Compiler omite memoizar esos componentes). Si molestan, migrar esos casos a `useWatch`/`Controller`. |
 
 ### 2.3 🟢 Funcionalidad existente en el API aún sin UI
@@ -214,7 +216,7 @@ Sin esto, las vistas seguirán ocultas (ver [frontend-phase1-map.md](./frontend-
 | ~~17~~ | ~~**Invitaciones SHARED_CODE**~~ ✅ (2026-10-08) | Pestaña "Compartido" en el diálogo de invitar (`users/shared-code-form.tsx`, acción `createSharedCodeAction`): código opcional con nombre (si va vacío lo genera el API), número de canjes y caducidad. Siempre da rol MEMBER, a propósito: un código que circula entre varias personas no debe repartir permisos de administración. Traduce `Invitation Code Taken` y `No Active Seat Grant`. Muestra el código para copiarlo; en la tabla aparece como "Compartida, `x / y`". |
 | ~~18~~ | ~~**Listado/gestión de invitaciones**~~ ✅ (2026-08-15) | Vista `/org/:id/invitations` sobre `GET .../invitations?status=` (filtro añadido en el API; `EXPIRED` incluye las ACTIVE vencidas por fecha, que la UI también pinta como expiradas porque no hay job que las marque): tipo, canjes, caducidad, copiar, reenviar (solo con email), revocar. |
 | 19 | **Grants del lado backoffice: editar** | `PATCH /backoffice/.../seat-grants/:grantId` (ampliar accesos, suspender, cambiar vigencia). Hoy la UI solo crea y revoca. |
-| 20 | **Preview pública de invitación** | `GET /invitations/:code/preview` — página pública `/invite/[code]` para que el invitado vea la organización antes de registrarse (el registro vive en la app People, definir el handoff). |
+| ~~20~~ | ~~**Preview pública de invitación**~~ ✅ (2026-10-19) | Página pública [`/invite/[code]`](../src/app/invite/%5Bcode%5D/page.tsx), destino del botón «Activar mi cuenta» del correo de invitación a administradores (el API lo arma con `DASHBOARD_URL`). Sin sesión, el invitado pone nombre, apellido y contraseña y la acción hace `POST /auth/register` con el código + login: **un admin ya no necesita la app**. Fecha de nacimiento y género solo se piden si la invitación también da acceso a la app (`grantsAppAccess`, nuevo en el preview). Con sesión abierta ofrece aceptar la invitación (`POST /invitations/redeem`) o cerrar sesión si es para otro correo. Invitaciones de miembro, usadas, inexistentes o atadas a teléfono muestran un aviso. El backoffice muestra el enlace de activación tras invitar, por si el correo no llega. Junto con esto: [`/reset-password`](../src/app/reset-password/page.tsx) (código por correo → contraseña nueva, `POST /auth/forgot-password` + `/auth/reset-password`) y el enlace «¿Olvidaste tu contraseña?» del login. |
 | 21 | **Filtros de estado en Clientes (SA)** | El API acepta `?status=`; la UI solo filtra por tipo. |
 | 22 | **Motivo en el audit log** | Desde el 2026-10-03 la app permite borrar la cuenta (`DELETE /auth/me`). En el audit log llega como `MEMBERSHIP_REVOKED` con `metadata.reason = "ACCOUNT_DELETED"` y `actorUserId`/`subjectUserId` en `null` (el usuario ya no existe); la UI lo pinta como "Membresía revocada", igual que una revocación hecha por un admin. Sin cambio de contrato: `metadata` ya pasa por zod como `record`. Falta solo distinguirlo en la etiqueta ("Cuenta eliminada por el usuario"). El miembro desaparece de los listados y su cupo queda libre sin intervención. |
 
